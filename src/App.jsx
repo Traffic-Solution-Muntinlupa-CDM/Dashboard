@@ -3,6 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer
 } from "recharts";
+import { loadSimulationSnapshot } from "./simulationBridge";
 
 const PHASE_COLORS = {
   NORTHBOUND: "#22c55e",
@@ -142,7 +143,7 @@ export default function ANDARDashboard() {
   const [capacity, setCapacity] = useState(64);
   const [waitTime, setWaitTime] = useState(34);
   const [storage, setStorage] = useState(27);
-  const [chartData, setChartData] = useState(BASE_CHART_DATA);
+  const [chartData] = useState(BASE_CHART_DATA);
   const [vehicles, setVehicles] = useState([
     { id: 1, lane: "north", progress: 15, type: "car" },
     { id: 2, lane: "south", progress: 55, type: "jeepney" },
@@ -154,13 +155,45 @@ export default function ANDARDashboard() {
   ]);
   const [alertMsg, setAlertMsg] = useState("System nominal — all sensors operational");
   const [alertType, setAlertType] = useState("ok");
+  const [dataSource, setDataSource] = useState("example");
+  const [simulationSnapshot, setSimulationSnapshot] = useState(null);
+  const [simulationError, setSimulationError] = useState("");
 
   const currentPhase = PHASES[phaseIdx];
+  const selectedPhase = dataSource === "sumo" && simulationSnapshot
+    ? simulationSnapshot.controllerDecision.phase.toUpperCase()
+    : currentPhase;
+  const displayedVehicles = dataSource === "sumo" && simulationSnapshot
+    ? simulationSnapshot.approaches.reduce((total, approach) => total + approach.observedVehicles, 0)
+    : totalVehicles;
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    if (dataSource !== "sumo") return undefined;
+    let active = true;
+    const controller = new AbortController();
+    const refresh = async () => {
+      try {
+        const snapshot = await loadSimulationSnapshot(controller.signal);
+        if (active) {
+          setSimulationSnapshot(snapshot);
+          setSimulationError("");
+        }
+      } catch (error) {
+        if (active && error.name !== "AbortError") {
+          setSimulationSnapshot(null);
+          setSimulationError("Local SUMO bridge unavailable — showing example data");
+        }
+      }
+    };
+    refresh();
+    const timer = setInterval(refresh, 3000);
+    return () => { active = false; controller.abort(); clearInterval(timer); };
+  }, [dataSource]);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -264,10 +297,9 @@ export default function ANDARDashboard() {
             </div>
             <p style={{ margin: "3px 0 0", fontSize: 11, color: "#4a6080" }}>Adaptive Network for Dynamic and Automated Roadway Management · Edge-Based Computer Vision</p>
           </div>
-          <select style={{ background: "#0d1a2e", border: "1px solid #1a2d45", color: "#94a3b8", borderRadius: 6, padding: "5px 10px", fontSize: 12, cursor: "pointer" }}>
-            <option>Today</option>
-            <option>This Week</option>
-            <option>This Month</option>
+          <select aria-label="Data source" value={dataSource} onChange={(event) => setDataSource(event.target.value)} style={{ background: "#0d1a2e", border: "1px solid #1a2d45", color: "#94a3b8", borderRadius: 6, padding: "5px 10px", fontSize: 12, cursor: "pointer" }}>
+            <option value="example">Example data</option>
+            <option value="sumo">Local SUMO simulation</option>
           </select>
         </div>
 
@@ -281,12 +313,12 @@ export default function ANDARDashboard() {
               <span style={{ fontSize: 10, color: "#0ea5e9", fontFamily: "monospace" }}>CAM-01</span>
             </div>
             <div style={{ padding: 12, display: "flex", justifyContent: "center" }}>
-              <IntersectionSVG currentPhase={currentPhase} phaseTimer={phaseTimer} vehicles={vehicles} />
+              <IntersectionSVG currentPhase={selectedPhase} phaseTimer={phaseTimer} vehicles={vehicles} />
             </div>
             <div style={{ padding: "8px 12px", borderTop: "1px solid #1a2d45", background: "#060e1c", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 10, color: "#4a6080" }}>PHASE:</span>
               <span style={{ background: `${PHASE_COLORS[currentPhase]}20`, color: PHASE_COLORS[currentPhase], padding: "2px 7px", borderRadius: 4, fontSize: 10, fontFamily: "monospace", fontWeight: 700, border: `1px solid ${PHASE_COLORS[currentPhase]}40` }}>
-                {currentPhase}
+                {selectedPhase}
               </span>
               <span style={{ marginLeft: "auto", color: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}>{phaseTimer}s</span>
             </div>
@@ -310,12 +342,12 @@ export default function ANDARDashboard() {
           <div style={{ background: "#091220", border: "1px solid #1a2d45", borderRadius: 10, padding: "12px 12px" }}>
             <div style={{ fontSize: 11, color: "#4a6080", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Signal Phases</div>
             {PHASES.map(ph => (
-              <PhaseBar key={ph} phase={ph} active={ph === currentPhase} color={PHASE_COLORS[ph]} />
+              <PhaseBar key={ph} phase={ph} active={ph === selectedPhase} color={PHASE_COLORS[ph]} />
             ))}
             <div style={{ marginTop: 10, borderTop: "1px solid #1a2d45", paddingTop: 10 }}>
               <div style={{ fontSize: 10, color: "#4a6080", marginBottom: 4 }}>CONTROLLER MODE</div>
               <div style={{ background: "#0ea5e918", border: "1px solid #0ea5e930", borderRadius: 5, padding: "5px 8px", fontSize: 10, color: "#0ea5e9", fontFamily: "monospace", textAlign: "center" }}>
-                RL-PPO ADAPTIVE
+                {dataSource === "sumo" ? "SUMO · READ-ONLY" : "RL-PPO ADAPTIVE"}
               </div>
             </div>
           </div>
@@ -324,7 +356,7 @@ export default function ANDARDashboard() {
         {/* ── Lane counts ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 14 }}>
           {[
-            { label: "TOTAL INTERSECTION", val: totalVehicles, pct: Math.round(((totalVehicles - 71) / 71) * 100), color: "#0ea5e9", borderColor: "#0ea5e9" },
+            { label: "TOTAL INTERSECTION", val: displayedVehicles, pct: Math.round(((displayedVehicles - 71) / 71) * 100), color: "#0ea5e9", borderColor: "#0ea5e9" },
             { label: "LANE A VEHICLES", val: laneA, pct: laneAPct, color: "#818cf8", borderColor: "#1a2d45" },
             { label: "LANE B VEHICLES", val: laneB, pct: laneBPct, color: "#f59e0b", borderColor: "#1a2d45" },
           ].map(({ label, val, pct, color, borderColor }) => (
@@ -341,6 +373,12 @@ export default function ANDARDashboard() {
             </div>
           ))}
         </div>
+
+        {dataSource === "sumo" && (
+          <div style={{ marginBottom: 14, background: "#0ea5e910", border: "1px solid #0ea5e930", borderRadius: 8, padding: "9px 12px", fontSize: 11, color: "#94a3b8" }}>
+            {simulationSnapshot ? <>SUMO simulation · read-only — {simulationSnapshot.sourceFile} · source modified {new Date(simulationSnapshot.sourceModifiedAt).toLocaleString()} · decision {simulationSnapshot.simulation.decisionStep}. Recorded simulator decision; not controller-confirmed field telemetry.</> : simulationError}
+          </div>
+        )}
 
         {/* ── Charts ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 14 }}>
