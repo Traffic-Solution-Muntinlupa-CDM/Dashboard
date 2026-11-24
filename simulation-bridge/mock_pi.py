@@ -444,7 +444,7 @@ def _build_handler(controller: MockController):
             self.send_header("X-Captured-At", f"{time.time():.3f}")
             self.send_header("X-Camera-Source", "simulated")
             self.end_headers()
-            self.wfile.write(data)
+            self._write(data)
 
         def do_PUT(self):  # noqa: N802
             if self.path != "/config":
@@ -479,7 +479,16 @@ def _build_handler(controller: MockController):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            self._write(data)
+
+        def _write(self, data):
+            # The browser aborts an in-flight still whenever the phase changes,
+            # because that image is no longer needed. That is normal traffic,
+            # not a server fault, so it must not print a traceback each time.
+            try:
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                pass
 
         def log_message(self, fmt, *args):  # keep the demo console readable
             return
