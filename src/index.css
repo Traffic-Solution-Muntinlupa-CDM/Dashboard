@@ -437,8 +437,9 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   display: flex;
   flex-direction: column;
   padding: 26px;
-  background: #102a43;
-  color: #ffffff;
+  background: #ffffff;
+  color: #102a43;
+  border: 1px solid #bfd0de;
   border-radius: 6px;
 }
 .brief-heading {
@@ -447,22 +448,21 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   gap: 18px;
   align-items: flex-start;
   padding-bottom: 22px;
-  border-bottom: 1px solid #ffffff2c;
+  border-bottom: 1px solid #d5e1ea;
 }
 .brief-heading h2 { margin: 0; font: 700 21px/1.2 'Manrope', sans-serif; }
-.brief-heading p { margin: 6px 0 0; color: #aec5d8; font-size: 13px; }
-.operational-brief .text-button { flex: 0 0 auto; color: #7fc4f4; border-color: #7fc4f4; }
-.priority-item { padding: 26px 0; border-bottom: 1px solid #ffffff2c; }
-.priority-item h3 { margin: 16px 0 5px; font: 700 22px 'Manrope', sans-serif; }
-.priority-item > strong { display: block; color: #ffc369; font-size: 14px; }
-.priority-item p { margin: 12px 0 0; color: #c0d1df; font-size: 13px; line-height: 1.55; }
+.operational-brief .text-button { flex: 0 0 auto; color: #0b66b2; border-color: #7fb0d5; }
+.priority-item { margin: 22px 0 8px; padding: 4px 0 24px 18px; border-left: 3px solid #d98a2b; border-bottom: 1px solid #d5e1ea; }
+.priority-item h3 { margin: 0 0 7px; color: #102a43; font: 700 20px 'Manrope', sans-serif; letter-spacing: -.015em; }
+.priority-item > strong { display: block; color: #8a541b; font-size: 14px; }
+.priority-item p { max-width: 34ch; margin: 12px 0 0; color: #60768a; font-size: 13px; line-height: 1.55; }
 .brief-status { margin-top: auto; padding-top: 10px; }
-.brief-status > div { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid #ffffff20; }
+.brief-status > div { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid #e0e8ef; }
 .brief-status > div:last-child { border-bottom: 0; }
 .status-dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #8da6b9; }
 .status-dot.ok { background: #43d39e; }
-.brief-status b { font-size: 13px; }
-.brief-status p { margin: 4px 0 0; color: #aec5d8; font-size: 12px; }
+.brief-status b { color: #27445c; font-size: 13px; }
+.brief-status p { margin: 4px 0 0; color: #718699; font-size: 12px; }
 .approach-section {
   overflow: hidden;
   background: #ffffff;

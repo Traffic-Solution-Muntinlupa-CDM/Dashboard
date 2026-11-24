@@ -217,11 +217,10 @@ export default function App() {
       </section>
       <section className="operational-brief">
         <div className="brief-heading">
-          <div><h2>Operational brief</h2><p>Items that may need review</p></div>
+          <h2>Operational brief</h2>
           <button className="text-button" onClick={() => setPage('activity')}>View activity <Icon name="arrow" /></button>
         </div>
         <div className="priority-item">
-          <Badge tone="warning">Attention</Badge>
           <h3>High observed volume</h3>
           <strong>Northbound · 128 vehicles</strong>
           <p>Count from the example 15-minute window. This is not a measured queue length.</p>
@@ -334,7 +333,6 @@ export default function App() {
         <div className="city-name">Muntinlupa City</div>
         <div className="header-controls">
           <label><span>Data source</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="example">Example data</option><option value="sumo">Local SUMO simulation</option></select></label>
-          <Badge tone={source === 'sumo' && snapshot ? 'ok' : 'neutral'}>{source === 'sumo' && snapshot ? 'Read-only connected' : 'Prototype'}</Badge>
           <button className="menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav}><Icon name="menu" /> Menu</button>
         </div>
       </header>
