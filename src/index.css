@@ -688,3 +688,97 @@ aside nav button > span {
   .page-title h1, .overview-title h1 { font-size: 38px; }
   .page-title .title-copy > p:last-child, .overview-title p { font-size: 16px; }
 }
+
+/* --- live controller wiring ------------------------------------------------ */
+.source-banner {
+  margin: 0 0 20px;
+  border-left: 4px solid var(--line-dark);
+  padding: 11px 14px;
+  background: #ffffff;
+  color: #4b5d55;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.source-banner.ok { border-left-color: var(--green); }
+.source-banner.warning { border-left-color: var(--amber); background: #fdf6ea; }
+.source-banner b { color: var(--ink); }
+.source-banner span { color: #718699; }
+
+.maintenance-grid input:disabled,
+.maintenance-grid select:disabled { background: #eef3f8; color: #7b8881; cursor: not-allowed; }
+
+.field-note {
+  margin: 6px 0 0;
+  color: #718699;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.field-error {
+  margin: 10px 0 0;
+  border-left: 3px solid var(--red);
+  padding-left: 10px;
+  color: #8d3540;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.read-only-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px dashed var(--line-dark);
+  padding: 10px 11px;
+  background: #f7faff;
+  color: #4b5d55;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 13px;
+}
+.read-only-value span { color: #334f66; font-weight: 700; }
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.confirm-panel {
+  margin-top: 18px;
+  border: 1px solid var(--line-dark);
+  padding: 14px;
+  background: #f7faff;
+}
+.confirm-panel h4 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.confirm-panel ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.confirm-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #e0e8ef;
+  padding-bottom: 7px;
+  color: #4b5d55;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 13px;
+}
+.confirm-panel li b { color: var(--ink); white-space: nowrap; }
+.confirm-panel p {
+  margin: 12px 0 0;
+  color: #718699;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+

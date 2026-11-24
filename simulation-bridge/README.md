@@ -1,9 +1,34 @@
-# Local SUMO bridge
+# Local bridges
 
-`dashboard_bridge.py` serves existing SUMO decision-log rows to the browser dashboard over localhost. It is read-only: it never starts SUMO or accepts a controller command.
+Two small Python servers for working on the dashboard without the intersection.
+
+## `mock_pi.py` — mock controller
+
+Replicates the REST contract of `deployed/pipeline/rest.py`:
 
 ```powershell
-py simulation-bridge\dashboard_bridge.py --log-dir ..\andar-reference-Final\v6\logs\decisions --port 8765
+npm run mock:pi          # or: python simulation-bridge\mock_pi.py --speed 2
 ```
 
-The GitHub Pages dashboard uses it only when **Local SUMO simulation** is selected. It polls `GET /api/v1/simulation/latest`, exposes example data when the local bridge is unreachable, and labels returned values as recorded simulator output rather than field-controller confirmation or live camera telemetry.
+Serves `http://127.0.0.1:8080` with `GET /health`, `GET /current`, `GET /live`,
+`GET /config`, and `PUT /config`. It runs a round-robin phase rotation with a
+starvation override and drifting sensor counts, so the dashboard has something
+moving to render.
+
+`/health` returns `"simulated": true`; the dashboard reads that and labels the
+source **Controller simulator**, so a demo can never be mistaken for field
+telemetry. The served runtime config is a copy seeded from the deployed locked
+defaults, written to your temp directory (the path is printed on startup). Use
+`--config` to point at a specific `deploy_config.json`.
+
+## `dashboard_bridge.py` — SUMO decision-log replay
+
+Read-only bridge over completed SUMO decision CSVs. It never starts SUMO and
+never accepts a controller command.
+
+```powershell
+python simulation-bridge\dashboard_bridge.py --log-dir ..\andar-reference-Final\v6\logs\decisions --port 8765
+```
+
+The dashboard uses it only as a fallback when the controller is unreachable, and
+labels it **Recorded simulation**.

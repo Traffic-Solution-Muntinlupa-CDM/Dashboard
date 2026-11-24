@@ -10,6 +10,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "mock:pi": "python simulation-bridge/mock_pi.py --speed 2",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
