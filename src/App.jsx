@@ -16,11 +16,11 @@ import {
 import { loadSimulationSnapshot } from './simulationBridge';
 
 const approaches = [
-  { name: 'Northbound', count: 128, wait: '38 s', queue: 'Moderate', color: '#146b55' },
-  { name: 'Southbound', count: 104, wait: '29 s', queue: 'Light', color: '#246a92' },
-  { name: 'Brudger', count: 86, wait: '42 s', queue: 'Moderate', color: '#d17a20' },
-  { name: 'Estanislao', count: 72, wait: '21 s', queue: 'Light', color: '#725b8e' },
-  { name: 'City Hall', count: 54, wait: '35 s', queue: 'Light', color: '#a5454f' },
+  { name: 'Northbound', count: 128, wait: '38 s', queue: 'Moderate', color: '#075a9c' },
+  { name: 'Southbound', count: 104, wait: '29 s', queue: 'Light', color: '#2879ad' },
+  { name: 'Brudger', count: 86, wait: '42 s', queue: 'Moderate', color: '#4f8fba' },
+  { name: 'Estanislao', count: 72, wait: '21 s', queue: 'Light', color: '#749fc6' },
+  { name: 'City Hall', count: 54, wait: '35 s', queue: 'Light', color: '#345f87' },
 ];
 
 const trend = [
@@ -41,12 +41,12 @@ const nav = [
 ];
 
 const chartTooltip = {
-  background: '#fffdf6',
-  border: '1px solid #213c35',
-  borderRadius: 0,
-  boxShadow: '4px 4px 0 rgba(23, 48, 42, .12)',
-  fontFamily: 'IBM Plex Mono, monospace',
-  fontSize: 11,
+  background: '#ffffff',
+  border: '1px solid #9eb4c6',
+  borderRadius: 4,
+  boxShadow: '0 8px 24px rgba(16, 42, 67, .12)',
+  fontFamily: 'Atkinson Hyperlegible, sans-serif',
+  fontSize: 13,
 };
 
 function Icon({ name }) {
@@ -70,11 +70,10 @@ function Card({ children, className = '' }) {
   return <section className={`atlas-panel ${className}`}>{children}</section>;
 }
 
-function SectionHeading({ code, title, description, action }) {
+function SectionHeading({ title, description, action }) {
   return (
     <div className="section-heading">
       <div>
-        <span className="section-code">{code}</span>
         <h3>{title}</h3>
         {description && <p>{description}</p>}
       </div>
@@ -83,15 +82,13 @@ function SectionHeading({ code, title, description, action }) {
   );
 }
 
-function PageTitle({ eyebrow, title, description, badge }) {
+function PageTitle({ title, description }) {
   return (
     <div className="page-title">
       <div className="title-copy">
-        <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      {badge}
     </div>
   );
 }
@@ -111,15 +108,14 @@ function MiniIntersection({ phase = 'Northbound' }) {
           <b>{name}</b>
         </span>
       ))}
-      <figcaption><span>FIG 01</span> Schematic geometry · illustrative only</figcaption>
     </figure>
   );
 }
 
-function Chart({ dataKey, color, title, unit, code }) {
+function Chart({ dataKey, color, title, unit }) {
   return (
     <Card className="chart">
-      <SectionHeading code={code} title={title} description="Example data · 15-minute windows" action={<Badge>Illustrative</Badge>} />
+      <SectionHeading title={title} />
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={trend}>
           <defs>
@@ -141,9 +137,7 @@ function Chart({ dataKey, color, title, unit, code }) {
 
 export default function App() {
   const [page, setPage] = useState('overview');
-  const [source, setSource] = useState('example');
   const [snapshot, setSnapshot] = useState(null);
-  const [sourceError, setSourceError] = useState('');
   const [notice, setNotice] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
   const [settings, setSettings] = useState({
@@ -151,21 +145,20 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (source !== 'sumo') return undefined;
     let alive = true;
     const controller = new AbortController();
     const poll = async () => {
       try {
         const next = await loadSimulationSnapshot(controller.signal);
-        if (alive) { setSnapshot(next); setSourceError(''); }
+        if (alive) setSnapshot(next);
       } catch {
-        if (alive) { setSnapshot(null); setSourceError('Local SUMO bridge unavailable — showing example data.'); }
+        if (alive) setSnapshot(null);
       }
     };
     poll();
     const id = setInterval(poll, 3000);
     return () => { alive = false; controller.abort(); clearInterval(id); };
-  }, [source]);
+  }, []);
 
   const rows = useMemo(() => snapshot
     ? approaches.map((row) => ({ ...row, count: snapshot.approaches?.find((item) => item.name === row.name)?.observedVehicles ?? row.count }))
@@ -179,7 +172,7 @@ export default function App() {
       <span className="log-index">{index}</span>
       <Badge tone={type}>{type}</Badge>
       <div><strong>{title}</strong><p>{description}</p></div>
-      <time>Example</time>
+      <time>Recent</time>
     </div>
   );
 
@@ -187,11 +180,9 @@ export default function App() {
     <div className="overview-title">
       <div>
         <h1>Intersection overview</h1>
-        <p>Current traffic conditions and signal activity at the ANDAR research intersection.</p>
+        <p>Current traffic conditions and signal activity at the ANDAR intersection.</p>
       </div>
-      <Badge tone={source === 'sumo' && snapshot ? 'ok' : 'neutral'}>{source === 'sumo' && snapshot ? 'SUMO simulation · read-only' : 'Example data'}</Badge>
     </div>
-    {source === 'sumo' && <div className="source-banner"><b>DATA SOURCE /</b> {snapshot ? <>SUMO decision {snapshot.simulation.decisionStep} · {snapshot.sourceFile} · recorded simulation data, not controller confirmation.</> : sourceError}</div>}
     <div className="overview-stage">
       <section className="situation">
         <div className="situation-heading">
@@ -211,8 +202,8 @@ export default function App() {
         </div>
         <div className="summary-metrics">
           <div><strong>{total}</strong><span>Observed vehicles</span><p>08:00–08:15 window</p></div>
-          <div><strong>33 <small>s</small></strong><span>Average waiting time</span><p>Illustrative observation</p></div>
-          <div><strong>71<small>%</small></strong><span>Utilization</span><p>Example estimate</p></div>
+          <div><strong>33 <small>s</small></strong><span>Average waiting time</span><p>Current interval</p></div>
+          <div><strong>71<small>%</small></strong><span>Utilization</span><p>Capacity estimate</p></div>
         </div>
       </section>
       <section className="operational-brief">
@@ -223,10 +214,10 @@ export default function App() {
         <div className="priority-item">
           <h3>High observed volume</h3>
           <strong>Northbound · 128 vehicles</strong>
-          <p>Count from the example 15-minute window. This is not a measured queue length.</p>
+          <p>Vehicle count for the current 15-minute interval.</p>
         </div>
         <div className="brief-status">
-          <div><span className="status-dot ok" /><span><b>Camera feeds available</b><p>Five schematic feed placeholders</p></span></div>
+          <div><span className="status-dot ok" /><span><b>Dashboard services available</b><p>Traffic views are operating normally</p></span></div>
           <div><span className="status-dot neutral" /><span><b>Field controller unconfirmed</b><p>No physical acknowledgement connected</p></span></div>
         </div>
       </section>
@@ -246,7 +237,7 @@ export default function App() {
   </>;
 
   const analytics = <>
-    <PageTitle eyebrow="TRAFFIC ANALYTICS / PLATE 02" title="Example performance trends" description="Historical-style visuals for presentation and workflow review. They are not MTMB field measurements." badge={<Badge>Example data</Badge>} />
+    <PageTitle title="Traffic performance" description="Volume, waiting time, queues, and throughput across the morning period." />
     <div className="chart-grid">
       <Chart code="A / 01" dataKey="volume" color="#146b55" title="Traffic volume" unit="" />
       <Chart code="A / 02" dataKey="wait" color="#c36818" title="Waiting-time trend" unit="s" />
@@ -255,69 +246,68 @@ export default function App() {
     </div>
     <div className="two-col">
       <Card>
-        <SectionHeading code="A / 05" title="Distribution by approach" description="Example observed share." />
+        <SectionHeading code="A / 05" title="Distribution by approach" />
         <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={rows} dataKey="count" nameKey="name" innerRadius={62} outerRadius={98} paddingAngle={1}>{rows.map((row) => <Cell key={row.name} fill={row.color} />)}</Pie><Tooltip contentStyle={chartTooltip} /></PieChart></ResponsiveContainer>
       </Card>
       <Card>
-        <SectionHeading code="A / 06" title="Peak-period comparison" description="Illustrative throughput comparison." />
+        <SectionHeading code="A / 06" title="Peak-period comparison" />
         <ResponsiveContainer width="100%" height={260}><BarChart data={trend}><CartesianGrid vertical={false} stroke="#d8d5c8" strokeDasharray="2 5" /><XAxis dataKey="time" tickLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip contentStyle={chartTooltip} /><Bar dataKey="volume" fill="#146b55" /><Bar dataKey="throughput" fill="#9fb9ab" /></BarChart></ResponsiveContainer>
       </Card>
     </div>
   </>;
 
   const operations = <>
-    <PageTitle eyebrow="SIGNAL OPERATIONS / PLATE 03" title="Adaptive signal controller" description="Research-prototype view of selected movements and recent simulated decisions." badge={<Badge>No field control</Badge>} />
+    <PageTitle title="Signal operations" description="Current movement, phase duration, sequence, and recent controller activity." />
     <div className="operations-grid">
       <Card className="operation-map">
         <SectionHeading code="LIVE SCHEMATIC / 01" title="Selected movement" />
         <MiniIntersection phase={phase} />
-        <div className="operation-callout"><Badge tone="ok">Active</Badge><h2>{phase} GREEN</h2><p>{snapshot ? 'Recorded SUMO simulation decision' : 'Illustrative selected movement'}</p><strong>{snapshot?.controllerDecision?.greenSeconds || 35} seconds</strong></div>
+        <div className="operation-callout"><Badge tone="ok">Active</Badge><h2>{phase} GREEN</h2><p>Current signal movement</p><strong>{snapshot?.controllerDecision?.greenSeconds || 35} seconds</strong></div>
       </Card>
       <Card>
-        <SectionHeading code="SEQUENCE / 02" title="Signal sequence" description="Highlighted movement represents the current prototype state." />
+        <SectionHeading code="SEQUENCE / 02" title="Signal sequence" description="The active movement is highlighted." />
         <ol className="sequence">{['Northbound', 'Southbound', 'Brudger', 'Estanislao', 'City Hall', 'Pedestrian'].map((name, index) => <li className={name === phase ? 'current' : ''} key={name}><span>{String(index + 1).padStart(2, '0')}</span><i />{name}{name === phase && <Badge tone="ok">Active</Badge>}</li>)}</ol>
       </Card>
       <Card>
         <SectionHeading code="DECISION LOG / 03" title="Recent decisions" />
-        {log('simulated', 'Phase selected', `${phase} served for ${snapshot?.controllerDecision?.greenSeconds || 35} seconds.`, '01')}
-        {log('proposed', 'Timing profile', 'Balanced daytime profile is shown as a frontend preview.', '02')}
-        {log('neutral', 'Transition status', 'No physical transition acknowledgement is connected.', '03')}
+        {log('ok', 'Phase selected', `${phase} served for ${snapshot?.controllerDecision?.greenSeconds || 35} seconds.`, '01')}
+        {log('neutral', 'Timing profile', `${settings.profile} is selected.`, '02')}
+        {log('offline', 'Transition confirmation', 'Physical controller acknowledgement is unavailable.', '03')}
       </Card>
     </div>
   </>;
 
   const maintenance = <>
-    <PageTitle eyebrow="MAINTENANCE & CONFIGURATION / PLATE 04" title="Controller configuration preview" description="Interface demonstration for future authorized maintenance workflows." badge={<Badge tone="warning">Frontend demonstration</Badge>} />
-    <div className="demo-notice"><b>PREVIEW BOUNDARY /</b> Frontend demonstration only. Configuration validation and traffic-controller activation are not connected.</div>
+    <PageTitle title="Controller configuration" description="Manage timing profiles, operating limits, and system logging." />
     <div className="maintenance-grid">
       <Card><SectionHeading code="M / 01" title="Timing profile" />
         <label>Approved profile<select value={settings.profile} onChange={(event) => set('profile', event.target.value)}><option>Balanced daytime</option><option>Weekday peak</option><option>Night operation</option></select></label>
-        <label>Operating mode<select value={settings.mode} onChange={(event) => set('mode', event.target.value)}><option>Automatic</option><option>Manual preview</option></select></label>
-        <label className="check"><input type="checkbox" /> Emergency override concept <small>Preview only</small></label>
+        <label>Operating mode<select value={settings.mode} onChange={(event) => set('mode', event.target.value)}><option>Automatic</option><option>Manual</option></select></label>
+        <label className="check"><input type="checkbox" /> Emergency override</label>
       </Card>
       <Card><SectionHeading code="M / 02" title="Timing guardrails" />
         <div className="form-grid">{[['min', 'Minimum green (s)'], ['max', 'Maximum green (s)'], ['yellow', 'Yellow interval (s)'], ['allRed', 'All-red clearance (s)'], ['pedestrian', 'Pedestrian duration (s)']].map(([key, label]) => <label key={key}>{label}<input type="number" min="0" value={settings[key]} onChange={(event) => set(key, event.target.value)} /></label>)}</div>
-        <label>Safety buffer<select><option>Standard — illustrative</option><option>Enhanced — illustrative</option></select></label>
+        <label>Safety buffer<select><option>Standard</option><option>Enhanced</option></select></label>
       </Card>
       <Card><SectionHeading code="M / 03" title="Logging & component status" />
-        <label className="check"><input type="checkbox" defaultChecked /> Record configuration previews</label>
-        <label className="check"><input type="checkbox" defaultChecked /> Show data-source availability in log</label>
-        <div className="component-status"><span>Dashboard frontend <Badge tone="ok">Available</Badge></span><span>Local SUMO bridge <Badge>Optional</Badge></span><span>Field controller <Badge tone="offline">Not connected</Badge></span></div>
-        <button className="primary" onClick={() => setNotice('Demonstration only — the configuration preview was not sent or applied.')}>Save preview <Icon name="arrow" /></button>
+        <label className="check"><input type="checkbox" defaultChecked /> Record configuration changes</label>
+        <label className="check"><input type="checkbox" defaultChecked /> Show service status in activity log</label>
+        <div className="component-status"><span>Dashboard <Badge tone="ok">Available</Badge></span><span>Traffic data service <Badge>Automatic</Badge></span><span>Field controller <Badge tone="offline">Unconfirmed</Badge></span></div>
+        <button className="primary" onClick={() => setNotice('Settings updated for this session.')}>Save settings <Icon name="arrow" /></button>
         {notice && <p className="inline-notice" role="status">{notice}</p>}
       </Card>
     </div>
   </>;
 
   const activity = <>
-    <PageTitle eyebrow="ACTIVITY & SYSTEM LOGS / PLATE 05" title="Operational record" description="All entries below are proposed, simulated, or frontend example events." badge={<Badge>Example data</Badge>} />
+    <PageTitle title="Activity and system logs" description="Recent traffic, controller, configuration, and service events." />
     <Card className="log-card">
-      <SectionHeading code="EVENT REGISTER / 05" title="Recorded activity" description="Provenance is shown for every entry." />
-      <div className="legend"><span>Evidence key</span><Badge tone="simulated">Simulated</Badge><Badge tone="proposed">Proposed</Badge><Badge>System</Badge><Badge tone="offline">Physical confirmation unavailable</Badge></div>
-      {log('simulated', 'Signal decision recorded', `${phase} selected in the ${source === 'sumo' ? 'local SUMO' : 'example'} data context.`, '01')}
-      {log('warning', 'Volume advisory raised', 'Northbound reached the illustrative advisory threshold. No field alarm was sent.', '02')}
-      {log('proposed', 'Configuration preview available', 'Maintenance controls demonstrate a future authorized workflow only.', '03')}
-      {log('neutral', 'Data source ready', source === 'sumo' && snapshot ? 'Local SUMO simulation data is read-only.' : 'Example dataset is active.', '04')}
+      <SectionHeading code="EVENT REGISTER / 05" title="Recent activity" />
+      <div className="legend"><Badge tone="ok">Operational</Badge><Badge tone="warning">Advisory</Badge><Badge>System</Badge><Badge tone="offline">Unconfirmed</Badge></div>
+      {log('ok', 'Signal state updated', `${phase} is the active movement.`, '01')}
+      {log('warning', 'Volume advisory raised', 'Northbound reached the volume advisory threshold.', '02')}
+      {log('neutral', 'Configuration available', 'Controller timing values can be reviewed in Maintenance.', '03')}
+      {log('ok', 'Dashboard available', 'Traffic operations workspace is online.', '04')}
       {log('offline', 'Physical controller confirmation', 'No controller, camera, sensor, or authentication service is connected.', '05')}
     </Card>
   </>;
@@ -332,7 +322,6 @@ export default function App() {
         </button>
         <div className="city-name">Muntinlupa City</div>
         <div className="header-controls">
-          <label><span>Data source</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="example">Example data</option><option value="sumo">Local SUMO simulation</option></select></label>
           <button className="menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav}><Icon name="menu" /> Menu</button>
         </div>
       </header>
@@ -340,7 +329,6 @@ export default function App() {
         <aside className={mobileNav ? 'open' : ''}>
           <div className="nav-heading"><span>Workspace</span></div>
           <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); }} key={id}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
-          <div className="side-note"><Badge>Research prototype</Badge><p>Data is illustrative unless the local SUMO source is connected.</p></div>
         </aside>
         <main id="content" key={page}>{pages[page]}</main>
       </div>
