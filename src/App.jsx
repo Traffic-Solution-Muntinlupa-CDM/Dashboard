@@ -116,17 +116,6 @@ function MiniIntersection({ phase = 'Northbound' }) {
   );
 }
 
-function Metric({ code, label, value, note, tone }) {
-  return (
-    <Card className="metric">
-      <div className="metric-index">{code}</div>
-      <p>{label}</p>
-      <strong className={tone || ''}>{value}</strong>
-      <small>{note}</small>
-    </Card>
-  );
-}
-
 function Chart({ dataKey, color, title, unit, code }) {
   return (
     <Card className="chart">
@@ -195,55 +184,66 @@ export default function App() {
   );
 
   const overview = <>
-    <PageTitle
-      eyebrow="ANDAR INTERSECTION / NODE 01 / EXAMPLE SITE"
-      title="Operator overview"
-      description="Traffic condition and controller context for one local intersection."
-      badge={<Badge tone={source === 'sumo' && snapshot ? 'ok' : 'warning'}>{source === 'sumo' && snapshot ? 'SUMO simulation · read-only' : 'Example data'}</Badge>}
-    />
+    <div className="overview-title">
+      <div>
+        <h1>Intersection overview</h1>
+        <p>Current traffic conditions and signal activity at the ANDAR research intersection.</p>
+      </div>
+      <Badge tone={source === 'sumo' && snapshot ? 'ok' : 'neutral'}>{source === 'sumo' && snapshot ? 'SUMO simulation · read-only' : 'Example data'}</Badge>
+    </div>
     {source === 'sumo' && <div className="source-banner"><b>DATA SOURCE /</b> {snapshot ? <>SUMO decision {snapshot.simulation.decisionStep} · {snapshot.sourceFile} · recorded simulation data, not controller confirmation.</> : sourceError}</div>}
-    <div className="status-band">
-      <span><b>Condition</b><Badge tone="warning">Moderate demand</Badge></span>
-      <span><b>Active movement</b><strong>{phase} GREEN</strong></span>
-      <span><b>Controller</b><Badge tone="ok">Available</Badge></span>
-      <span><b>Health</b><strong>5 of 5 feeds</strong></span>
-    </div>
-    <div className="metric-grid">
-      <Metric code="01" label="Observed vehicles" value={total} note="Example 08:00–08:15 window" />
-      <Metric code="02" label="Average waiting time" value="33 s" note="Illustrative observation" tone="warning-text" />
-      <Metric code="03" label="Queue status" value="Moderate" note="Northbound advisory" />
-      <Metric code="04" label="Intersection utilization" value="71%" note="Example capacity estimate" />
-    </div>
-    <div className="overview-grid">
-      <Card className="intersection-card">
-        <SectionHeading code="MAP / 01" title="Intersection condition" description="Signal state is illustrative." action={<Badge tone="ok">Connected</Badge>} />
-        <MiniIntersection phase={phase} />
-        <div className="movement">
-          <div><small>Active phase</small><strong>{phase} GREEN</strong></div>
-          <div><small>Phase duration</small><strong>{snapshot?.controllerDecision?.greenSeconds || 35} s</strong></div>
-          <div><small>Operating mode</small><strong>Adaptive research prototype</strong></div>
+    <div className="overview-stage">
+      <section className="situation">
+        <div className="situation-heading">
+          <div><span>Current condition</span><h2>Moderate demand</h2></div>
+          <Badge tone="ok">5 of 5 feeds available</Badge>
         </div>
-      </Card>
-      <Card className="alerts">
-        <SectionHeading code="ATTN / 03" title="Recent attention" description="Prioritized operational context." action={<button className="text-button" onClick={() => setPage('activity')}>View all <Icon name="arrow" /></button>} />
-        {log('warning', 'High observed volume — Northbound', '128 vehicles in the example 15-minute window. This is not a measured queue length.', '01')}
-        {log('neutral', 'Camera feeds healthy', 'Five schematic feed placeholders are available in this frontend prototype.', '02')}
-        {log('ok', 'Controller status available', 'No field-controller confirmation is connected.', '03')}
-      </Card>
+        <div className="situation-body">
+          <MiniIntersection phase={phase} />
+          <div className="phase-focus">
+            <span className="phase-light" />
+            <p>Active movement</p>
+            <strong>{phase}</strong>
+            <h3>Green</h3>
+            <div><span>Phase duration</span><b>{snapshot?.controllerDecision?.greenSeconds || 35} seconds</b></div>
+            <div><span>Controller</span><b>Available</b></div>
+          </div>
+        </div>
+        <div className="summary-metrics">
+          <div><strong>{total}</strong><span>Observed vehicles</span><p>08:00–08:15 window</p></div>
+          <div><strong>33 <small>s</small></strong><span>Average waiting time</span><p>Illustrative observation</p></div>
+          <div><strong>71<small>%</small></strong><span>Utilization</span><p>Example estimate</p></div>
+        </div>
+      </section>
+      <section className="operational-brief">
+        <div className="brief-heading">
+          <div><h2>Operational brief</h2><p>Items that may need review</p></div>
+          <button className="text-button" onClick={() => setPage('activity')}>View activity <Icon name="arrow" /></button>
+        </div>
+        <div className="priority-item">
+          <Badge tone="warning">Attention</Badge>
+          <h3>High observed volume</h3>
+          <strong>Northbound · 128 vehicles</strong>
+          <p>Count from the example 15-minute window. This is not a measured queue length.</p>
+        </div>
+        <div className="brief-status">
+          <div><span className="status-dot ok" /><span><b>Camera feeds available</b><p>Five schematic feed placeholders</p></span></div>
+          <div><span className="status-dot neutral" /><span><b>Field controller unconfirmed</b><p>No physical acknowledgement connected</p></span></div>
+        </div>
+      </section>
     </div>
-    <Card>
-      <SectionHeading code="APPROACH REGISTER / 05" title="Approach summary" description="Example observations by approach." action={<Badge>08:00–08:15</Badge>} />
-      <div className="approach-table">
-        {rows.map((row, index) => <div className="approach" key={row.name} style={{ '--approach': row.color }}>
-          <span className="approach-number">0{index + 1}</span>
-          <span className="dot" />
-          <strong>{row.name}</strong>
-          <span>{row.count} vehicles</span>
-          <span>{row.wait} avg wait</span>
-          <Badge tone={row.queue === 'Moderate' ? 'warning' : 'neutral'}>{row.queue} queue</Badge>
+    <section className="approach-section">
+      <div className="approach-heading"><div><h2>Approach conditions</h2><p>Observed traffic by incoming movement</p></div><Badge>08:00–08:15</Badge></div>
+      <div className="approach-list">
+        <div className="approach-list-head"><span>Approach</span><span>Vehicles</span><span>Average wait</span><span>Queue</span></div>
+        {rows.map((row) => <div className="approach-row" key={row.name} style={{ '--approach': row.color }}>
+          <span className="approach-name"><i /><strong>{row.name}</strong></span>
+          <span>{row.count}</span>
+          <span>{row.wait}</span>
+          <Badge tone={row.queue === 'Moderate' ? 'warning' : 'neutral'}>{row.queue}</Badge>
         </div>)}
       </div>
-    </Card>
+    </section>
   </>;
 
   const analytics = <>
@@ -324,17 +324,14 @@ export default function App() {
   </>;
 
   const pages = { overview, analytics, operations, maintenance, activity };
-  const activePage = nav.findIndex(([id]) => id === page) + 1;
-
   return (
     <div className="app">
       <a className="skip" href="#content">Skip to content</a>
       <header>
         <button className="brand" onClick={() => setPage('overview')} aria-label="ANDAR overview">
-          <span className="brand-mark"><i /><b>AN</b></span>
-          <span className="brand-name"><b>ANDAR</b><small>Mobility systems research</small></span>
+          <span className="brand-name"><b>ANDAR</b></span>
         </button>
-        <div className="site-marker"><span>NODE</span><strong>01</strong><small>Example intersection</small></div>
+        <div className="city-name">Muntinlupa City</div>
         <div className="header-controls">
           <label><span>Data source</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="example">Example data</option><option value="sumo">Local SUMO simulation</option></select></label>
           <Badge tone={source === 'sumo' && snapshot ? 'ok' : 'neutral'}>{source === 'sumo' && snapshot ? 'Read-only connected' : 'Prototype'}</Badge>
@@ -343,9 +340,9 @@ export default function App() {
       </header>
       <div className="shell">
         <aside className={mobileNav ? 'open' : ''}>
-          <div className="nav-heading"><span>Operator workspace</span><b>{String(activePage).padStart(2, '0')} / 05</b></div>
-          <nav aria-label="Primary navigation">{nav.map(([id, label, icon], index) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); }} key={id}><span className="nav-index">0{index + 1}</span><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
-          <div className="side-note"><span className="coordinate">14.4081° N / 121.0415° E</span><Badge>Example data</Badge><p>Camera tiles and detections are schematic placeholders.</p></div>
+          <div className="nav-heading"><span>Workspace</span></div>
+          <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); }} key={id}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
+          <div className="side-note"><Badge>Research prototype</Badge><p>Data is illustrative unless the local SUMO source is connected.</p></div>
         </aside>
         <main id="content" key={page}>{pages[page]}</main>
       </div>
