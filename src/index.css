@@ -202,6 +202,19 @@ header .badge.ok { background: #e2f0fb; color: #075a9c; }
 .legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 0 17px; border-bottom: 2px solid var(--ink); }
 .legend > span { margin-right: 8px; color: var(--muted); font: 600 9px 'Atkinson Hyperlegible', sans-serif; text-transform: uppercase; }
 .log-card { max-width: 1050px; }
+.log-card .badge {
+  min-width: 88px;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  color: #ffffff;
+  font-weight: 700;
+}
+.log-card .badge.ok { background: #176b4d; color: #ffffff; }
+.log-card .badge.warning { background: #a95608; color: #ffffff; }
+.log-card .badge.neutral { background: #365b75; color: #ffffff; }
+.log-card .badge.offline { background: #7b4051; color: #ffffff; }
+.log-card .legend .badge { min-width: auto; padding-inline: 12px; }
 
 @media (max-width: 1150px) {
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
