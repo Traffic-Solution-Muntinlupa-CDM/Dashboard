@@ -292,7 +292,11 @@ export default function App() {
       <Card><SectionHeading code="M / 03" title="Logging & component status" />
         <label className="check"><input type="checkbox" defaultChecked /> Record configuration changes</label>
         <label className="check"><input type="checkbox" defaultChecked /> Show service status in activity log</label>
-        <div className="component-status"><span>Dashboard <Badge tone="ok">Available</Badge></span><span>Traffic data service <Badge>Automatic</Badge></span><span>Field controller <Badge tone="offline">Unconfirmed</Badge></span></div>
+        <div className="component-status">
+          <div><span>Dashboard</span><strong className="status-ok"><i />Available</strong></div>
+          <div><span>Traffic data service</span><strong className="status-auto"><i />Automatic</strong></div>
+          <div><span>Field controller</span><strong className="status-unconfirmed"><i />Unconfirmed</strong></div>
+        </div>
         <button className="primary" onClick={() => setNotice('Settings updated for this session.')}>Save settings <Icon name="arrow" /></button>
         {notice && <p className="inline-notice" role="status">{notice}</p>}
       </Card>

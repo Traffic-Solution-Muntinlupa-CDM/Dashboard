@@ -186,7 +186,16 @@ header .badge.ok { background: #e2f0fb; color: #075a9c; }
 .maintenance-grid label.check small { color: #7b8881; font-weight: 400; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .component-status { display: grid; margin: 18px 0; border-top: 1px solid var(--line); }
-.component-status span { display: flex; justify-content: space-between; align-items: center; min-height: 42px; border-bottom: 1px solid var(--line); font-size: 11px; }
+.component-status > div { display: flex; justify-content: space-between; align-items: center; min-height: 48px; border-bottom: 1px solid var(--line); }
+.component-status > div > span { color: #334f66; font-size: 14px; }
+.component-status strong { display: inline-flex; align-items: center; gap: 8px; color: #526a7e; font-size: 14px; font-weight: 700; }
+.component-status strong i { width: 8px; height: 8px; border-radius: 50%; background: #8da6b9; }
+.component-status strong.status-ok { color: #176a51; }
+.component-status strong.status-ok i { background: #2caf7d; }
+.component-status strong.status-auto { color: #24658f; }
+.component-status strong.status-auto i { background: #4b93c4; }
+.component-status strong.status-unconfirmed { color: #7a6070; }
+.component-status strong.status-unconfirmed i { background: #9b8291; }
 .primary { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--forest); border-radius: 0; padding: 10px 14px; background: var(--forest); color: var(--paper); font: 600 10px 'Atkinson Hyperlegible', sans-serif; text-transform: uppercase; transition: background-color .18s, box-shadow .18s, transform .18s; }
 .primary:hover { background: #0a3e32; transform: translate(-2px, -2px); box-shadow: 3px 3px 0 #35a7ff; }
 .inline-notice { border-left: 3px solid var(--green); padding-left: 10px; color: var(--green); font-size: 11px; line-height: 1.45; }
@@ -658,7 +667,6 @@ aside nav button > span {
   letter-spacing: 0;
 }
 .maintenance-grid select, .maintenance-grid input { font-size: 15px; }
-.component-status span { min-height: 48px; font-size: 14px; }
 .primary { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 14px; text-transform: none; }
 .chart .recharts-responsive-container, .two-col .recharts-responsive-container { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 12px; }
 .legend > span { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 13px; text-transform: none; }
