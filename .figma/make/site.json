@@ -1,0 +1,10 @@
+{
+  "description": "A web application for managing imported project setup, validating deployment readiness, and preparing deploy previews for teams.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
