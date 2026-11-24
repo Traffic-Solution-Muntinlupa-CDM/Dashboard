@@ -24,6 +24,10 @@ import {
 } from './controllerContract';
 import { POLL_INTERVAL_MS } from './piBridge';
 import { loadDashboardSnapshot, sourceMeta } from './dataSource';
+import { CAMERA_LIST_REFRESH_MS, loadCameras } from './cameraBridge';
+import Badge from './Badge';
+import CameraPanel from './CameraPanel';
+import MiniIntersection from './MiniIntersection';
 import {
   ConfigError,
   DISPATCH_MODES,
@@ -79,10 +83,6 @@ function Icon({ name }) {
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
 
-function Badge({ tone = 'neutral', children }) {
-  return <span className={`badge ${tone}`}>{children}</span>;
-}
-
 function Card({ children, className = '' }) {
   return <section className={`atlas-panel ${className}`}>{children}</section>;
 }
@@ -108,25 +108,6 @@ function PageTitle({ title, description, badge }) {
       </div>
       {badge}
     </div>
-  );
-}
-
-function MiniIntersection({ phase, caption }) {
-  return (
-    <figure className="intersection" aria-label={`Schematic intersection with ${phase} active`}>
-      <div className="map-grid" />
-      <div className="north-marker"><span>N</span><i /></div>
-      <div className="road vertical"><span>NORTH / SOUTH</span></div>
-      <div className="road horizontal"><span>BRUDGER — CITY HALL</span></div>
-      <div className="center" />
-      {APPROACHES.map((approach, index) => (
-        <span key={approach.name} className={`light light-${index} ${approach.name === phase ? 'active' : ''}`}>
-          <i />
-          <b>{approach.name}</b>
-        </span>
-      ))}
-      <figcaption>Source <span>{caption}</span></figcaption>
-    </figure>
   );
 }
 
@@ -156,6 +137,7 @@ function Chart({ dataKey, color, title, unit }) {
 export default function App() {
   const [page, setPage] = useState('overview');
   const [snapshot, setSnapshot] = useState(null);
+  const [cameraInventory, setCameraInventory] = useState({ available: false, cameras: [] });
   const [linkError, setLinkError] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -220,6 +202,34 @@ export default function App() {
   const live = Boolean(snapshot?.available) && sourceKind !== 'example';
   const decision = snapshot?.controllerDecision ?? null;
   const connection = snapshot?.connection ?? { status: 'unreachable' };
+
+  const controllerOnline = Boolean(connection.controller);
+
+  // Camera inventory is optional and slow-moving: refresh it every 30 s and
+  // only while the controller is reachable, so an offline dashboard does not
+  // add failed requests to every poll.
+  useEffect(() => {
+    if (!controllerOnline) return undefined;
+
+    let alive = true;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const result = await loadCameras(controller.signal);
+        if (alive) setCameraInventory(result);
+      } catch {
+        // Aborted on unmount; the next refresh recovers.
+      }
+    };
+
+    load();
+    const id = setInterval(load, CAMERA_LIST_REFRESH_MS);
+    return () => {
+      alive = false;
+      controller.abort();
+      clearInterval(id);
+    };
+  }, [controllerOnline]);
   const phase = decision?.phase ?? 'Northbound';
   const greenSeconds = decision?.greenSeconds ?? null;
   const remainingSeconds = decision?.remainingSeconds ?? null;
@@ -345,7 +355,13 @@ export default function App() {
           </Badge>
         </div>
         <div className="situation-body">
-          <MiniIntersection phase={phase} caption={source.short} />
+          <CameraPanel
+            key={phase}
+            phase={phase}
+            sourceLabel={source.short}
+            cameras={cameraInventory.cameras}
+            camerasKnown={cameraInventory.available}
+          />
           <div className="phase-focus">
             <span className="phase-light" />
             <p>Active movement</p>
@@ -483,7 +499,6 @@ export default function App() {
   </>;
 
   const configError = configState.status === 'error' || saveState.status === 'error';
-  const controllerOnline = Boolean(connection.controller);
   const configBadge = !controllerOnline
     ? { tone: 'offline', label: 'Controller offline' }
     : configState.status === 'ready'

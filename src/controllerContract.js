@@ -43,6 +43,20 @@ export function displayPhaseForIndex(index) {
   return Number.isInteger(index) && index >= 0 && index < PHASES.length ? PHASES[index] : null;
 }
 
+// Movement slug used by the controller's camera routes (/snapshot/<slug>.jpg).
+const SLUG_BY_PHASE = {
+  Southbound: 'southbound',
+  Brudger: 'brudger',
+  Northbound: 'northbound',
+  Estanislao: 'estanislao',
+  'City Hall': 'cityhall',
+  Pedestrian: 'pedestrian',
+};
+
+export function movementSlug(displayPhase) {
+  return SLUG_BY_PHASE[displayPhase] ?? null;
+}
+
 export function approachForEdge(edge) {
   return APPROACH_BY_EDGE.get(edge) ?? null;
 }

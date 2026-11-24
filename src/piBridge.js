@@ -27,19 +27,36 @@ function requestSignal(signal, timeoutMs) {
 }
 
 /**
- * One request against the controller. Never throws on an HTTP error status --
- * the status is part of the answer (404 on /current and /config are meaningful).
+ * Raw request against the controller. Returns the Response untouched so binary
+ * endpoints (camera stills) can read headers and a blob.
  */
-export async function piRequest(path, { signal, method = 'GET', body, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
-  const headers = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+export async function piFetch(path, { signal, method = 'GET', body, headers: extraHeaders, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  const headers = { ...extraHeaders };
+  if (body !== undefined && headers['Content-Type'] === undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
 
-  const response = await fetch(`${PI_BASE}${path}`, {
+  return fetch(`${PI_BASE}${path}`, {
     method,
     signal: requestSignal(signal, timeoutMs),
     cache: 'no-store',
     headers,
     body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
+/**
+ * One JSON request against the controller. Never throws on an HTTP error
+ * status -- the status is part of the answer (404 on /current and /config are
+ * meaningful).
+ */
+export async function piRequest(path, { signal, method = 'GET', body, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  const response = await piFetch(path, {
+    signal,
+    method,
+    body,
+    timeoutMs,
+    headers: { Accept: 'application/json' },
   });
 
   let payload;

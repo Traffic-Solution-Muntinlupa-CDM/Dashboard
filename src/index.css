@@ -782,3 +782,71 @@ aside nav button > span {
   line-height: 1.5;
 }
 
+/* --- camera still (Overview) ----------------------------------------------- */
+.camera-panel { position: relative; height: 340px; }
+.camera-frame {
+  position: relative;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #aebfcd;
+  border-radius: 4px 0 0 4px;
+  background: #0b1c2b;
+}
+.camera-frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.camera-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(#00000099, #00000000);
+  pointer-events: none;
+}
+.camera-overlay.bottom {
+  top: auto;
+  bottom: 0;
+  gap: 16px;
+  background: linear-gradient(#00000000, #000000b3);
+  color: #e8f1f8;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 12px;
+}
+.camera-overlay.bottom span:last-child { white-space: nowrap; color: #bfd4e6; }
+.camera-movement {
+  color: #ffffff;
+  font-family: 'Archivo', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px #00000080;
+}
+.camera-fallback { position: relative; height: 100%; }
+.camera-fallback .intersection { height: 100%; }
+.camera-state {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  max-width: 74%;
+  margin: 0;
+  border-left: 3px solid var(--amber);
+  padding: 5px 8px;
+  background: #ffffffe8;
+  color: #526a7e;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.camera-state b { color: #27445c; }
+
+@media (max-width: 820px) {
+  .camera-panel, .camera-fallback { height: 260px; }
+  .camera-fallback .intersection { height: 260px; }
+  .camera-frame { border-radius: 4px 4px 0 0; }
+}
+

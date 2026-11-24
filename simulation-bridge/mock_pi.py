@@ -55,6 +55,28 @@ EDGE_FOR_PHASE = {
     4: "cityhall_exit",
 }
 
+FRAMES_DIR = Path(__file__).resolve().parent / "frames"
+
+# The two demo heads have cameras; the other three movements answer 404, which
+# is what the deployed controller will do until those cameras exist. The panel's
+# "no camera" state is therefore exercised by the mock, not simulated away.
+CAMERAS = [
+    {
+        "movement": "southbound",
+        "camera_id": "cam-sb",
+        "device": "Simulated USB camera",
+        "width": 960,
+        "height": 540,
+    },
+    {
+        "movement": "northbound",
+        "camera_id": "cam-nb",
+        "device": "Simulated head camera",
+        "width": 960,
+        "height": 540,
+    },
+]
+
 # Seeded from deployed/data/deploy_config.json (the shipped locked defaults).
 DEFAULT_CONFIG = {
     "version": 1,
@@ -379,11 +401,50 @@ def _build_handler(controller: MockController):
                 self._json(HTTPStatus.OK, controller.live_snapshot())
             elif self.path == "/config":
                 self._json(HTTPStatus.OK, controller.config)
+            elif self.path == "/cameras":
+                self._json(HTTPStatus.OK, CAMERAS)
+            elif self.path.startswith("/snapshot/"):
+                self._snapshot()
             else:
                 self._json(
                     HTTPStatus.NOT_FOUND,
-                    {"error": "not found", "paths": ["/health", "/current", "/live", "/config"]},
+                    {
+                        "error": "not found",
+                        "paths": ["/health", "/current", "/live", "/config", "/cameras",
+                                  "/snapshot/<movement>.jpg"],
+                    },
                 )
+
+        def _snapshot(self):
+            movement = self.path[len("/snapshot/"):]
+            if movement.endswith(".jpg"):
+                movement = movement[:-4]
+
+            entry = next((cam for cam in CAMERAS if cam["movement"] == movement), None)
+            if entry is None:
+                self._json(
+                    HTTPStatus.NOT_FOUND,
+                    {"error": f"no camera configured for movement {movement!r}"},
+                )
+                return
+
+            path = FRAMES_DIR / f"{movement}.jpg"
+            try:
+                data = path.read_bytes()
+            except OSError:
+                self._json(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    {"error": f"camera {entry['camera_id']} has no frame"},
+                )
+                return
+
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("X-Captured-At", f"{time.time():.3f}")
+            self.send_header("X-Camera-Source", "simulated")
+            self.end_headers()
+            self.wfile.write(data)
 
         def do_PUT(self):  # noqa: N802
             if self.path != "/config":
@@ -458,7 +519,7 @@ def main():
     server = ThreadingHTTPServer((args.host, args.port), _build_handler(controller))
     print(f"ANDAR mock controller on http://{args.host}:{args.port}")
     print(f"  runtime config: {config_path}")
-    print("  routes: /health /current /live GET|PUT /config")
+    print("  routes: /health /current /live GET|PUT /config /cameras /snapshot/<movement>.jpg")
     print("  source flag: simulated=true (the dashboard labels this 'Controller simulator')")
     try:
         server.serve_forever()

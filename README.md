@@ -42,11 +42,37 @@ hosted on the Pi itself).
 | `GET /health` | link status; `simulated: true` marks the mock |
 | `GET /current` | latest decision: phase, duration, source, queues, waits |
 | `GET /live` | ~1 Hz sample: counts, waits, kappa, pedestrian button |
+| `GET /cameras` | camera inventory (`movement`, `camera_id`, `device`) |
+| `GET /snapshot/<movement>.jpg` | slow still for one movement |
 | `GET /config` | runtime config for the Maintenance page |
 | `PUT /config` | validated, atomic replacement of `deploy_config.json` |
 
 `/current` only changes on a phase change (every 36–80 s); the dashboard polls
 it every 3 s and takes counts from `/live` so the numbers move between decisions.
+
+## Camera stills
+
+Overview shows a still for the active movement instead of the schematic. It
+fetches `/snapshot/<movement>.jpg` when the phase changes and refreshes every
+15 s while that phase stays green — a slow still, not a video feed.
+
+- `X-Captured-At` is stamped by the controller, not the camera. The panel shows
+  the age and switches to **Stale still** past 60 s.
+- `404` = no camera is configured for that movement, so the schematic stands in
+  with an explicit label.
+- `503` = a camera is configured but is not sending frames.
+- The browser never talks to a camera directly: credentials, capture backends
+  and any camera node stay on the controller.
+
+Only the **southbound** movement has camera hardware today (the Pi's USB webcam).
+The northbound head is still being built, so its camera will arrive later; the
+panel already handles a `404`/`503` for it without changes. The mock serves
+placeholders for both demo movements and 404s for the other three, so the
+"no camera" state is exercised rather than hidden.
+
+Camera stills are **not** the source of the approach counts. `/live` counts and
+a snapshot come from different paths, and the panel labels the device separately
+from the decision source.
 
 ## Data honesty rules
 
@@ -54,6 +80,9 @@ These are load-bearing; please keep them when changing the UI.
 
 - The source banner on every page names what is on screen: **Field controller**,
   **Controller simulator**, **Recorded simulation**, or **Example data**.
+- A camera still is never presented as live: the panel always shows the device,
+  the capture age, and a stale warning. Frames the controller marks as simulated
+  are labelled as such.
 - `waits{}` is *seconds an edge has gone unserved*, not average vehicle delay —
   it is labelled "Unserved".
 - `queues{}` is a vehicle count; the queue label is derived from count bands.
@@ -93,10 +122,14 @@ instead of pretending Save worked.
 ```
 src/controllerContract.js  edge/phase names, queue bands, source descriptions
 src/piBridge.js            REST client, timeouts, normalization
+src/cameraBridge.js        camera inventory + still fetches
 src/configApi.js           GET/merge/PUT, field diff, validation errors
 src/dataSource.js          field controller -> SUMO bridge -> example data
 src/App.jsx                views
+src/CameraPanel.jsx        Overview still with schematic fallback
 simulation-bridge/
   mock_pi.py               REST-contract mock controller (no hardware)
+  make_placeholder_frames.py  regenerates the mock's labelled test cards
+  frames/                  the placeholder stills themselves
   dashboard_bridge.py      read-only SUMO decision-log bridge
 ```
