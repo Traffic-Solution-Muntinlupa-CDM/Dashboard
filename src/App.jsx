@@ -29,6 +29,7 @@ import { WEATHER_REFRESH_MS, loadWeather, weatherTone } from './weatherBridge';
 import Badge from './Badge';
 import CameraPanel from './CameraPanel';
 import MiniIntersection from './MiniIntersection';
+import WeatherCard from './WeatherCard';
 import {
   ConfigError,
   DISPATCH_MODES,
@@ -373,16 +374,9 @@ export default function App() {
             <span>Current condition</span>
             <h2>{live ? `${demand} demand` : 'Example demand'}</h2>
           </div>
-          <div className="situation-badges">
-            <Badge tone={connection.controller ? 'ok' : 'offline'}>
-              {connection.controller ? (connection.simulated ? 'Simulator linked' : 'Controller linked') : 'Controller offline'}
-            </Badge>
-            <Badge tone={weather?.available ? weatherTone(weather.scalar) : weather ? 'warning' : 'neutral'}>
-              {weather?.available
-                ? `${weather.bucket}${weather.temperatureC != null ? ` · ${Math.round(weather.temperatureC)} °C` : ''}`
-                : weather ? 'Weather unavailable' : 'Weather…'}
-            </Badge>
-          </div>
+          <Badge tone={connection.controller ? 'ok' : 'offline'}>
+            {connection.controller ? (connection.simulated ? 'Simulator linked' : 'Controller linked') : 'Controller offline'}
+          </Badge>
         </div>
         <div className="situation-body">
           <CameraPanel
@@ -412,40 +406,43 @@ export default function App() {
           <div><strong>{greenSeconds != null ? Math.round(remainingSeconds ?? greenSeconds) : '—'} <small>s</small></strong><span>Phase remaining</span><p>{greenSeconds != null ? `of ${Math.round(greenSeconds)} s requested` : 'No decision yet'}</p></div>
         </div>
       </section>
-      <section className="operational-brief">
-        <div className="brief-heading">
-          <h2>Operational brief</h2>
-          <button className="text-button" onClick={() => setPage('activity')}>View activity <Icon name="arrow" /></button>
-        </div>
-        <div className="priority-item">
-          <h3>{busiest?.count ? 'Highest observed volume' : 'Awaiting demand'}</h3>
-          <strong>{busiest && busiest.count != null ? `${busiest.name} · ${busiest.count} vehicles` : 'No live sample yet'}</strong>
-          <p>Entering-edge vehicle count from the latest sensor sample.</p>
-        </div>
-        <div className="brief-status">
-          <div>
-            <span className={`status-dot ${connection.controller ? 'ok' : ''}`} />
-            <span>
-              <b>{source.short}</b>
-              <p>{connection.status === 'awaiting-decision' ? 'Reachable, waiting for its first decision' : source.detail}</p>
-            </span>
+      <div className="brief-column">
+        <WeatherCard weather={weather} />
+        <section className="operational-brief">
+          <div className="brief-heading">
+            <h2>Operational brief</h2>
+            <button className="text-button" onClick={() => setPage('activity')}>View activity <Icon name="arrow" /></button>
           </div>
-          <div>
-            <span className={`status-dot ${pedestrian.requestPresent ? 'ok' : ''}`} />
-            <span>
-              <b>{pedestrian.requestPresent ? 'Pedestrian request active' : 'No pedestrian request'}</b>
-              <p>{pedestrian.requestPresent ? `Waiting ${formatSeconds(pedestrian.pressAgeSeconds)}` : 'Button idle'}</p>
-            </span>
+          <div className="priority-item">
+            <h3>{busiest?.count ? 'Highest observed volume' : 'Awaiting demand'}</h3>
+            <strong>{busiest && busiest.count != null ? `${busiest.name} · ${busiest.count} vehicles` : 'No live sample yet'}</strong>
+            <p>Entering-edge vehicle count from the latest sensor sample.</p>
           </div>
-          <div>
-            <span className={`status-dot ${connection.runtimeConfig ? 'ok' : ''}`} />
-            <span>
-              <b>{connection.runtimeConfig ? 'Runtime config mounted' : 'Runtime config not mounted'}</b>
-              <p>{connection.runtimeConfig ? 'Timing edits can be applied from Maintenance' : 'Boot the controller with the cv overlay to enable writes'}</p>
-            </span>
+          <div className="brief-status">
+            <div>
+              <span className={`status-dot ${connection.controller ? 'ok' : ''}`} />
+              <span>
+                <b>{source.short}</b>
+                <p>{connection.status === 'awaiting-decision' ? 'Reachable, waiting for its first decision' : source.detail}</p>
+              </span>
+            </div>
+            <div>
+              <span className={`status-dot ${pedestrian.requestPresent ? 'ok' : ''}`} />
+              <span>
+                <b>{pedestrian.requestPresent ? 'Pedestrian request active' : 'No pedestrian request'}</b>
+                <p>{pedestrian.requestPresent ? `Waiting ${formatSeconds(pedestrian.pressAgeSeconds)}` : 'Button idle'}</p>
+              </span>
+            </div>
+            <div>
+              <span className={`status-dot ${connection.runtimeConfig ? 'ok' : ''}`} />
+              <span>
+                <b>{connection.runtimeConfig ? 'Runtime config mounted' : 'Runtime config not mounted'}</b>
+                <p>{connection.runtimeConfig ? 'Timing edits can be applied from Maintenance' : 'Boot the controller with the cv overlay to enable writes'}</p>
+              </span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
     <section className="approach-section">
       <div className="approach-heading">
