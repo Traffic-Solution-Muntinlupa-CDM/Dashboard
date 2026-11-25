@@ -90,6 +90,11 @@ It is read in the browser rather than from the Pi because `/live` does not carry
 weather yet. When it does, prefer that value — `src/weatherBridge.js` is the one
 place to change.
 
+The badge shows the controller's own three buckets — **Clear / Cloudy / Rainy** —
+so it cannot disagree with what the model saw. The exact WMO condition
+("Overcast", "Light drizzle", "Thunderstorm, hail") is kept in Activity & logs,
+not on the badge, because it is finer-grained than the controller's vocabulary.
+
 If the API is unreachable the badge reads **Weather unavailable** rather than
 disappearing, so a missing forecast stays visible. Weather is independent of the
 controller link: it keeps working while the Pi is away, and it is not a field

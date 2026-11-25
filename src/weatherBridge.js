@@ -127,6 +127,7 @@ export async function loadWeather(signal) {
   return {
     available: true,
     scalar,
+    bucket: conditionFromScalar(scalar),
     condition: WMO_LABELS[code] ?? conditionFromScalar(scalar),
     temperatureC: Number.isFinite(temperature) ? temperature : null,
     windKph: Number.isFinite(wind) ? wind : null,

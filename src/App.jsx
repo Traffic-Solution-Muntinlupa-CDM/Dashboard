@@ -379,7 +379,7 @@ export default function App() {
             </Badge>
             <Badge tone={weather?.available ? weatherTone(weather.scalar) : weather ? 'warning' : 'neutral'}>
               {weather?.available
-                ? `${weather.condition}${weather.temperatureC != null ? ` · ${Math.round(weather.temperatureC)} °C` : ''}`
+                ? `${weather.bucket}${weather.temperatureC != null ? ` · ${Math.round(weather.temperatureC)} °C` : ''}`
                 : weather ? 'Weather unavailable' : 'Weather…'}
             </Badge>
           </div>
@@ -707,7 +707,7 @@ export default function App() {
     weather?.available ? weatherTone(weather.scalar) : 'offline',
     'Weather',
     weather?.available
-      ? `${weather.condition} · ${weather.temperatureC != null ? `${Math.round(weather.temperatureC)} °C` : 'temperature unavailable'}${weather.windKph != null ? ` · wind ${Math.round(weather.windKph)} km/h` : ''} — Open-Meteo at the intersection coordinates, the same provider the controller uses.`
+      ? `${weather.bucket} — Open-Meteo reports "${weather.condition}" · ${weather.temperatureC != null ? `${Math.round(weather.temperatureC)} °C` : 'temperature unavailable'}${weather.windKph != null ? ` · wind ${Math.round(weather.windKph)} km/h` : ''}. Same provider and coordinates the controller uses.`
       : weather ? `Unavailable: ${weather.message}` : 'Loading the intersection weather…',
     String(activityRows.length + 1).padStart(2, '0'),
   ));
