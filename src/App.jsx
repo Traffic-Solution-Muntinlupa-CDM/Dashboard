@@ -28,8 +28,15 @@ import { CAMERA_LIST_REFRESH_MS, loadCameras } from './cameraBridge';
 import { WEATHER_REFRESH_MS, loadWeather, weatherTone } from './weatherBridge';
 import Badge from './Badge';
 import CameraPanel from './CameraPanel';
+import ConfirmDialog from './ConfirmDialog';
+import Icon from './Icon';
+import LoginPage from './LoginPage';
 import MiniIntersection from './MiniIntersection';
+import OperatorPage from './OperatorPage';
 import WeatherCard from './WeatherCard';
+import { Card, PageTitle, SectionHeading } from './layout';
+import { isSignedIn, signOut } from './operatorSession';
+import { cancelOverride, loadOverride, loadSignals } from './operatorApi';
 import {
   ConfigError,
   DISPATCH_MODES,
@@ -59,6 +66,7 @@ const nav = [
   ['overview', 'Overview', 'overview'],
   ['analytics', 'Traffic analytics', 'chart'],
   ['operations', 'Signal operations', 'signal'],
+  ['control', 'Control room', 'bolt'],
   ['maintenance', 'Maintenance', 'tools'],
   ['activity', 'Activity & logs', 'log'],
 ];
@@ -71,47 +79,6 @@ const chartTooltip = {
   fontFamily: 'Atkinson Hyperlegible, sans-serif',
   fontSize: 13,
 };
-
-function Icon({ name }) {
-  const paths = {
-    overview: <><path d="M4 5h7v6H4zM13 5h7v10h-7zM4 13h7v6H4zM13 17h7v2h-7z" /></>,
-    chart: <><path d="M4 19V9m5 10V5m6 14v-7m5 7V3" /><path d="M3 19h18" /></>,
-    signal: <><circle cx="12" cy="12" r="3" /><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3m0-14-3 3M8 16l-3 3" /></>,
-    tools: <><path d="m14 6 4-4 4 4-4 4M18 2v8M4 21l7-7" /><path d="M13 13 8 8 3 9l-1-1 6-6 1 1-1 5 5 5" /></>,
-    log: <><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5" /></>,
-    menu: <><path d="M3 6h18M3 12h18M3 18h18" /></>,
-    arrow: <><path d="M5 12h14m-5-5 5 5-5 5" /></>,
-  };
-  return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
-}
-
-function Card({ children, className = '' }) {
-  return <section className={`atlas-panel ${className}`}>{children}</section>;
-}
-
-function SectionHeading({ title, description, action }) {
-  return (
-    <div className="section-heading">
-      <div>
-        <h3>{title}</h3>
-        {description && <p>{description}</p>}
-      </div>
-      {action}
-    </div>
-  );
-}
-
-function PageTitle({ title, description, badge }) {
-  return (
-    <div className="page-title">
-      <div className="title-copy">
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      {badge}
-    </div>
-  );
-}
 
 function Chart({ dataKey, color, title, unit }) {
   return (
@@ -153,9 +120,14 @@ export default function App() {
 
   const [prefs, setPrefs] = useState({ recordChanges: true, showServiceStatus: true });
   const [changeLog, setChangeLog] = useState([]);
+  const [signedIn, setSignedIn] = useState(() => isSignedIn());
+  const [signals, setSignals] = useState({ available: false, heads: [], timing: {} });
+  const [override, setOverride] = useState({ available: false, active: false });
+  const [controlError, setControlError] = useState('');
 
   // -- telemetry poll -------------------------------------------------------
   useEffect(() => {
+    if (!signedIn) return undefined;
     let alive = true;
     const controller = new AbortController();
     const poll = async () => {
@@ -176,7 +148,7 @@ export default function App() {
       controller.abort();
       clearInterval(id);
     };
-  }, []);
+  }, [signedIn]);
 
   // Weather comes straight from Open-Meteo — the same provider and coordinates
   // the controller's cv.yaml uses — so it keeps working while the Pi is away.
@@ -200,7 +172,8 @@ export default function App() {
     };
   }, []);
 
-  const refreshConfig = useCallback(async (signal) => {    setConfigState({ status: 'loading', message: '' });
+  const refreshConfig = useCallback(async (signal) => {
+    setConfigState({ status: 'loading', message: '' });
     try {
       const result = await loadRuntimeConfig(signal);
       if (!result.mounted) {
@@ -254,6 +227,58 @@ export default function App() {
       clearInterval(id);
     };
   }, [controllerOnline]);
+
+  // -- operator control -----------------------------------------------------
+  // Polled on every page (not just Control room) because the banner and the
+  // header badge have to show an active takeover anywhere in the app.
+  const refreshOverride = useCallback(async (signal) => {
+    const next = await loadOverride(signal);
+    setOverride(next);
+    return next;
+  }, []);
+
+  useEffect(() => {
+    if (!signedIn || !controllerOnline) return undefined;
+    let alive = true;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const next = await loadOverride(controller.signal);
+        if (alive) setOverride(next);
+      } catch {
+        // Aborted on unmount or the controller went away; keep the last state.
+      }
+    };
+    load();
+    const id = setInterval(load, 3000);
+    return () => {
+      alive = false;
+      controller.abort();
+      clearInterval(id);
+    };
+  }, [signedIn, controllerOnline]);
+
+  useEffect(() => {
+    if (!signedIn || !controllerOnline) return undefined;
+    let alive = true;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const next = await loadSignals(controller.signal);
+        if (alive) setSignals(next);
+      } catch {
+        // Aborted on unmount; the next refresh recovers.
+      }
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => {
+      alive = false;
+      controller.abort();
+      clearInterval(id);
+    };
+  }, [signedIn, controllerOnline]);
+
   const phase = decision?.phase ?? 'Northbound';
   const greenSeconds = decision?.greenSeconds ?? null;
   const remainingSeconds = decision?.remainingSeconds ?? null;
@@ -339,8 +364,25 @@ export default function App() {
     }
   };
 
-  const log = (type, title, description, index = '—', time = 'Recent') => (
-    <div className="log-row" key={`${index}-${title}`}>
+  const abortOverride = async () => {
+    setControlError('');
+    try {
+      await cancelOverride();
+      await refreshOverride();
+    } catch (error) {
+      setControlError(error.message);
+    }
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setSignedIn(false);
+    setSnapshot(null);
+    setOverride({ available: false, active: false });
+    setSignals({ available: false, heads: [], timing: {} });
+  };
+
+  const log = (type, title, description, index = '—', time = 'Recent') => (    <div className="log-row" key={`${index}-${title}`}>
       <span className="log-index">{index}</span>
       <Badge tone={type}>{type}</Badge>
       <div><strong>{title}</strong><p>{description}</p></div>
@@ -609,24 +651,18 @@ export default function App() {
           <p className={configError ? 'field-error' : 'inline-notice'} role="status">{saveState.message}</p>
         )}
         {pendingSave && (
-          <div className="confirm-panel">
-            <h4>Confirm {pendingSave.changes.length} change{pendingSave.changes.length === 1 ? '' : 's'}</h4>
-            <ul>
-              {pendingSave.changes.map((change) => (
-                <li key={change.label}>
-                  <span>{change.label}</span>
-                  <b>{String(change.from ?? '—')} → {String(change.to ?? '—')}</b>
-                </li>
-              ))}
-            </ul>
-            <p>PUT /config replaces the file atomically. Fields not listed are re-read from the controller and preserved. The new timing applies on the next decision.</p>
-            <div className="action-row">
-              <button className="primary" onClick={confirmSave} disabled={saveState.status === 'saving'}>
-                {saveState.status === 'saving' ? 'Applying…' : 'Confirm write'}
-              </button>
-              <button className="text-button" onClick={() => setPendingSave(null)} disabled={saveState.status === 'saving'}>Cancel</button>
-            </div>
-          </div>
+          <ConfirmDialog
+            title={`Confirm ${pendingSave.changes.length} change${pendingSave.changes.length === 1 ? '' : 's'}`}
+            lines={[
+              ...pendingSave.changes.map((change) => `${change.label}: ${String(change.from ?? '—')} → ${String(change.to ?? '—')}`),
+              'PUT /config replaces the file atomically. Fields not listed are preserved and the new timing applies on the next decision.',
+            ]}
+            confirmLabel="Write configuration"
+            busy={saveState.status === 'saving'}
+            error={configError ? saveState.message : ''}
+            onConfirm={confirmSave}
+            onClose={() => setPendingSave(null)}
+          />
         )}
       </Card>
 
@@ -715,7 +751,21 @@ export default function App() {
     </Card>
   </>;
 
-  const pages = { overview, analytics, operations, maintenance, activity };
+  const control = (
+    <OperatorPage
+      phase={phase}
+      signals={signals}
+      override={override}
+      onStatusChange={refreshOverride}
+    />
+  );
+
+  const pages = { overview, analytics, operations, control, maintenance, activity };
+
+  if (!signedIn) {
+    return <LoginPage onSignedIn={() => setSignedIn(true)} />;
+  }
+
   return (
     <div className="app">
       <a className="skip" href="#content">Skip to content</a>
@@ -726,6 +776,7 @@ export default function App() {
         <div className="city-name">Muntinlupa City</div>
         <div className="header-controls">
           <Badge tone={source.tone}>{source.short}</Badge>
+          <button className="header-signout" onClick={handleSignOut}>Sign out</button>
           <button className="menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav}><Icon name="menu" /> Menu</button>
         </div>
       </header>
@@ -736,6 +787,22 @@ export default function App() {
         </aside>
         <main id="content" key={page}>
           {sourceBanner}
+          {override.active && (
+            <div className={`override-banner ${override.cancelling ? 'cancelling' : ''}`}>
+              <div>
+                <b>Operator override</b>
+                <span>
+                  {override.cancelling
+                    ? ' — returning to policy'
+                    : ` — ${PHASES[override.steps?.[override.index]?.phase] ?? '—'} green · step ends in ${Math.round(override.step_remaining ?? 0)} s · step ${(override.index ?? 0) + 1} of ${override.steps?.length ?? 0}${override.mode === 'loop' ? ' · rotating' : ''}`}
+                </span>
+              </div>
+              <button className="text-button" onClick={abortOverride} disabled={override.cancelling}>
+                Return to policy
+              </button>
+            </div>
+          )}
+          {controlError && <p className="field-error" role="alert">{controlError}</p>}
           {pages[page]}
         </main>
       </div>

@@ -11,13 +11,22 @@ npm run mock:pi          # or: python simulation-bridge\mock_pi.py --speed 2
 ```
 
 Serves `http://127.0.0.1:8080` with `GET /health`, `GET /current`, `GET /live`,
-`GET /config`, `PUT /config`, plus the camera routes:
+`GET /config`, `PUT /config`, the camera routes, and the operator routes:
 
 ```
-GET /cameras                    -> [{ movement, camera_id, device, ... }]
-GET /snapshot/<movement>.jpg    -> 200 image/jpeg (X-Captured-At, X-Camera-Source)
+GET    /signals                 -> heads + timing (same shape as the Pi)
+GET    /override                -> the active program, or {active:false}
+POST   /override                -> 202 {override_id, applied_steps, warnings}
+DELETE /override                -> 202 {status:"cancelling"}
+GET    /cameras                 -> [{ movement, camera_id, device, ... }]
+GET    /snapshot/<movement>.jpg -> 200 image/jpeg (X-Captured-At, X-Camera-Source)
                                    404 no camera for that movement
 ```
+
+The operator program is simulated in real time: a step's green runs for the
+requested seconds (clamped 15–60), then a 10 s yellow, then the next step. Once
+mode hands back to the rotation; loop mode repeats until its cap or a cancel,
+which truncates the current step into yellow → red.
 
 The mock reports cameras for the two demo heads (`southbound`, `northbound`)
 and 404s the other three movements, which is exactly what the deployed

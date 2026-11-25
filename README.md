@@ -44,6 +44,8 @@ hosted on the Pi itself).
 | `GET /live` | ~1 Hz sample: counts, waits, kappa, pedestrian button |
 | `GET /cameras` | camera inventory (`movement`, `camera_id`, `device`) |
 | `GET /snapshot/<movement>.jpg` | slow still for one movement |
+| `GET /signals` | signal heads + the timing envelope |
+| `GET/POST/DELETE /override` | operator program: read, start, cancel |
 | `GET /config` | runtime config for the Maintenance page |
 | `PUT /config` | validated, atomic replacement of `deploy_config.json` |
 
@@ -73,6 +75,35 @@ placeholders for both demo movements and 404s for the other three, so the
 Camera stills are **not** the source of the approach counts. `/live` counts and
 a snapshot come from different paths, and the panel labels the device separately
 from the decision source.
+
+## Operator control
+
+The dashboard opens on a sign-in gate. `VITE_OPERATOR_PASSWORD` (default
+`andar-demo`) is checked **in the browser only** — it is a demo access gate, not
+security. The controller's operator endpoints are deliberately unauthenticated;
+the boundary is network access to `:8080`. See `deployed/pipeline/rest.py`.
+
+**Control room** queues phases and runs them once or in rotation:
+
+```
+POST /override
+{"steps":[{"phase":1,"seconds":30},{"phase":2,"seconds":20}],
+ "mode":"once"}                       // or "loop" + max_duration_seconds
+-> 202 {override_id, applied_steps, yellow, all_red, warnings[]}
+```
+
+- The current green is cut through its **yellow** (10 s here), then red, then the
+  requested phase. A green never jumps straight to another green.
+- `seconds` is accepted 5–120 and clamped by the signal heads to 15–60; the UI
+  shows the applied values and any warnings (a phase with no head holds red).
+- `once` returns to the policy when the list ends. `loop` rotates until the cap
+  or **Return to policy**. Cancel truncates the current green into yellow → red,
+  then hands back.
+- `GET /override` carries `index`, `step_remaining`, `ends_at` and `cancelling`,
+  so the banner and the Live state panel stay honest.
+
+Both overriding and writing config require the password to be **re-entered** in
+a confirmation dialog that lists exactly what will happen.
 
 ## Weather
 
@@ -137,10 +168,9 @@ whole object — `validate()` requires a complete config, and this keeps fields
 the form does not own intact. Every write needs an explicit confirmation showing
 the field-level diff.
 
-Two controls have no backing on the deployed controller and are shown read-only:
-
-- **All-red clearance** comes from `hardware.yaml` in the signals container.
-- **Emergency override** has no command path at all.
+One control has no backing in the runtime JSON: **all-red clearance** comes from
+`hardware.yaml` in the signals container. Operator override now has a real
+command path — see *Operator control* above.
 
 `PUT /config` returns `404` when the controller was started without the cv
 overlay, because only `config/cv.yaml` sets `runtime_config_path` and only
@@ -154,8 +184,13 @@ src/controllerContract.js  edge/phase names, queue bands, source descriptions
 src/piBridge.js            REST client, timeouts, normalization
 src/cameraBridge.js        camera inventory + still fetches
 src/configApi.js           GET/merge/PUT, field diff, validation errors
+src/operatorApi.js         /signals and /override client
+src/operatorSession.js     demo password gate (browser-only)
+src/LoginPage.jsx          sign-in gate
+src/ConfirmDialog.jsx      password reconfirmation for destructive actions
+src/OperatorPage.jsx       Control room (program builder + live state)
 src/dataSource.js          field controller -> SUMO bridge -> example data
-src/App.jsx                views
+src/App.jsx                views, login gate, override banner
 src/CameraPanel.jsx        Overview still with schematic fallback
 simulation-bridge/
   mock_pi.py               REST-contract mock controller (no hardware)

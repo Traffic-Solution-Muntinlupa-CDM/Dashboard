@@ -57,6 +57,100 @@ EDGE_FOR_PHASE = {
 
 FRAMES_DIR = Path(__file__).resolve().parent / "frames"
 
+# Signal heads declared on the demo rig: southbound (Pi) and northbound (ESP32).
+# Every other phase is accepted by the override API but holds red.
+SIGNAL_HEADS = [
+    {"phase": 0, "name": "southbound", "driver": "ws2812"},
+    {"phase": 2, "name": "northbound-remote", "driver": "esp32"},
+]
+HEAD_PHASES = {head["phase"] for head in SIGNAL_HEADS}
+SIGNAL_TIMING = {"min_green": 15, "max_green": 60, "yellow": 10, "all_red": 0}
+
+MAX_OVERRIDE_STEPS = 8
+MIN_STEP_SECONDS = 5.0
+MAX_STEP_SECONDS = 120.0
+
+
+class MockOverrideError(Exception):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+class MockOverride:
+    """Mirror of deployed/pipeline/operator.py's program bookkeeping."""
+
+    def __init__(self, steps, mode, max_duration_seconds, reason):
+        self.override_id = f"mock-{int(time.time())}"
+        self.steps = steps
+        self.mode = mode
+        self.max_duration_seconds = float(max_duration_seconds)
+        self.reason = reason
+        self.warnings = []
+        self.yellow = float(SIGNAL_TIMING["yellow"])
+        self.all_red = float(SIGNAL_TIMING["all_red"])
+        self.started_at = time.time()
+        self.started_mono = time.monotonic()
+        self.index = 0
+        self.emitted = False
+        self.cancelled = False
+        self.cancel_clear_at = None
+        self.step_started_at = None
+
+    def response(self):
+        return {
+            "override_id": self.override_id,
+            "applied_steps": [dict(step) for step in self.steps],
+            "mode": self.mode,
+            "max_duration_seconds": self.max_duration_seconds,
+            "yellow": self.yellow,
+            "all_red": self.all_red,
+            "warnings": list(self.warnings),
+        }
+
+    def status(self, now, mono):
+        if not self.emitted:
+            remaining = self.steps[self.index]["seconds"] + self.yellow + self.all_red
+        elif self.cancelled and self.cancel_clear_at is not None:
+            remaining = max(0.0, self.cancel_clear_at - mono)
+        else:
+            end = (self.step_started_at + self.steps[self.index]["seconds"]
+                   + self.yellow + self.all_red)
+            remaining = max(0.0, end - now)
+
+        ends_at = None
+        if self.mode == "once":
+            ends_at = self.started_at + sum(
+                step["seconds"] + self.yellow + self.all_red for step in self.steps)
+
+        payload = {
+            "active": True,
+            "mode": self.mode,
+            "steps": [dict(step) for step in self.steps],
+            "index": self.index,
+            "step_remaining": round(remaining, 1),
+            "started_at": self.started_at,
+            "ends_at": ends_at,
+            "max_duration_seconds": self.max_duration_seconds,
+        }
+        if self.cancelled:
+            payload["cancelling"] = True
+        return payload
+
+    def advance(self):
+        self.index += 1
+        if self.index >= len(self.steps):
+            if self.mode == "loop":
+                self.index = 0
+            else:
+                return False
+        return True
+
+    def expired(self, mono):
+        return (self.mode == "loop"
+                and (mono - self.started_mono) >= self.max_duration_seconds)
+
 # The two demo heads have cameras; the other three movements answer 404, which
 # is what the deployed controller will do until those cameras exist. The panel's
 # "no camera" state is therefore exercised by the mock, not simulated away.
@@ -233,6 +327,7 @@ class MockController:
         self.pressed_at = None
         self.live_ts = self.started
         self.latest = None
+        self.override = None
 
     # -- config helpers ------------------------------------------------------
     def _band(self):
@@ -255,6 +350,86 @@ class MockController:
         self.config = validate(raw)
         with self.lock:
             self.yellow = float(self.config["timing"]["yellow_seconds"])
+
+    # -- operator override ---------------------------------------------------
+    def request_override(self, payload):
+        if not isinstance(payload, dict):
+            raise MockOverrideError(400, "body must be a JSON object")
+
+        raw_steps = payload.get("steps")
+        if not isinstance(raw_steps, list) or not (1 <= len(raw_steps) <= MAX_OVERRIDE_STEPS):
+            raise MockOverrideError(
+                400, f"steps must be a list of 1..{MAX_OVERRIDE_STEPS} entries")
+
+        mode = payload.get("mode", "once")
+        if mode not in ("once", "loop"):
+            raise MockOverrideError(400, "mode must be 'once' or 'loop'")
+
+        steps = []
+        warnings = []
+        for index, item in enumerate(raw_steps):
+            if not isinstance(item, dict):
+                raise MockOverrideError(400, f"steps[{index}] must be an object")
+            phase = item.get("phase")
+            if (isinstance(phase, bool) or not isinstance(phase, int)
+                    or not (0 <= phase < len(PHASE_NAMES))):
+                raise MockOverrideError(
+                    400, f"steps[{index}].phase is not a valid phase")
+            seconds = item.get("seconds")
+            if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+                raise MockOverrideError(
+                    400, f"steps[{index}].seconds must be a number")
+            if not (MIN_STEP_SECONDS <= float(seconds) <= MAX_STEP_SECONDS):
+                raise MockOverrideError(
+                    400, f"steps[{index}].seconds must be "
+                         f"{MIN_STEP_SECONDS:g}..{MAX_STEP_SECONDS:g}")
+
+            effective = min(max(float(seconds), SIGNAL_TIMING["min_green"]),
+                            SIGNAL_TIMING["max_green"])
+            if effective != float(seconds):
+                warnings.append(
+                    f"phase {phase}: green {float(seconds):g}s clamped to "
+                    f"{effective:g}s (signal timing)")
+            if phase not in HEAD_PHASES:
+                warnings.append(f"phase {phase} has no head configured")
+            steps.append({"phase": phase, "seconds": effective})
+
+        max_duration = payload.get("max_duration_seconds", 600)
+        if (isinstance(max_duration, bool)
+                or not isinstance(max_duration, (int, float))
+                or max_duration <= 0):
+            raise MockOverrideError(400, "max_duration_seconds must be > 0")
+        max_duration = min(float(max_duration), 3600.0)
+
+        with self.lock:
+            if self.override is not None:
+                raise MockOverrideError(409, "override already active")
+            program = MockOverride(
+                steps, mode, max_duration, str(payload.get("reason") or ""))
+            program.warnings = warnings
+            self.override = program
+            self.next_decision = time.time()
+        return program.response()
+
+    def cancel_override(self):
+        with self.lock:
+            if self.override is not None:
+                self.override.cancelled = True
+                self.next_decision = time.time()
+        return {"status": "cancelling"}
+
+    def get_override_status(self):
+        with self.lock:
+            program = self.override
+            if program is None:
+                return {"active": False}
+            return program.status(time.time(), time.monotonic())
+
+    def signals_snapshot(self):
+        return {
+            "heads": [dict(head) for head in SIGNAL_HEADS],
+            "timing": dict(SIGNAL_TIMING),
+        }
 
     # -- the loop ------------------------------------------------------------
     def tick(self):
@@ -279,6 +454,89 @@ class MockController:
             self.button_pressed = 1
 
     def _decide(self, now):
+        if self.override is not None:
+            record = self._override_step(now)
+            if record is not None:
+                self.latest = record
+                return
+            if self.override is not None:
+                return  # cancelling; a short wake was scheduled
+        record = self._normal_decision(now)
+        self.latest = record
+        self.next_decision = now + record["duration"] + record["yellow"]
+
+    def _base_record(self, now, phase, duration, source, override_reason=None,
+                     yellow=None):
+        return {
+            "ts": now,
+            "sim_time": int(now - self.started),
+            "phase": phase,
+            "phase_name": PHASE_NAMES[phase],
+            "duration": duration,
+            "yellow": self.yellow if yellow is None else yellow,
+            "source": source,
+            "override_reason": override_reason,
+            "queues": dict(self.counts),
+            "waits": {edge: round(self.waits[edge], 1) for edge in EDGES},
+            "pressed": bool(self.button_pressed),
+            "press_age": (
+                round(now - self.pressed_at, 1) if self.pressed_at is not None else 0.0
+            ),
+            "phase_probs": [0.0] * len(PHASE_NAMES),
+        }
+
+    def _override_step(self, now):
+        program = self.override
+        mono = time.monotonic()
+
+        if program.cancelled:
+            if not program.emitted:
+                self.override = None
+                return None
+            if program.cancel_clear_at is None:
+                program.cancel_clear_at = mono + program.yellow + program.all_red
+            if mono >= program.cancel_clear_at:
+                self.override = None
+                return None
+            self.next_decision = now + 0.2
+            return None
+
+        if program.expired(mono):
+            self.override = None
+            return None
+
+        if program.emitted and not program.advance():
+            self.override = None
+            return None
+
+        step = program.steps[program.index]
+        phase = int(step["phase"])
+        record = self._base_record(
+            now, phase, float(step["seconds"]), "emergency", "operator",
+            yellow=program.yellow)
+        record["preempt"] = not program.emitted
+        record["phase_probs"][phase] = 1.0
+        record["override"] = {
+            "mode": program.mode,
+            "index": program.index,
+            "count": len(program.steps),
+        }
+
+        if phase != PEDESTRIAN_PHASE:
+            edge = EDGE_FOR_PHASE.get(phase)
+            if edge is not None:
+                self.last_served[edge] = now
+        else:
+            self.button_pressed = 0
+            self.pressed_at = None
+
+        program.emitted = True
+        program.step_started_at = now
+        self.phase = phase
+        self.next_decision = now + float(step["seconds"]) + program.yellow
+        return record
+
+    def _normal_decision(self, now):
         source = "policy"
         override_reason = None
 
@@ -314,30 +572,14 @@ class MockController:
             total = sum(probs) or 1.0
             probs = [round(value / total, 4) for value in probs]
 
-        record = {
-            "ts": now,
-            "sim_time": int(now - self.started),
-            "phase": phase,
-            "phase_name": PHASE_NAMES[phase],
-            "duration": served,
-            "yellow": yellow,
-            "source": source,
-            "override_reason": override_reason,
-            "queues": dict(self.counts),
-            "waits": {edge: round(self.waits[edge], 1) for edge in EDGES},
-            "pressed": bool(self.button_pressed),
-            "press_age": (
-                round(now - self.pressed_at, 1) if self.pressed_at is not None else 0.0
-            ),
-            "phase_probs": probs,
-        }
-        self.latest = record
+        record = self._base_record(
+            now, phase, served, source, override_reason, yellow=yellow)
+        record["phase_probs"] = probs
 
         # Advance the rotation. The real policy can re-serve a movement; a
         # round-robin keeps the mock visibly moving without pretending to be it.
         self.phase = (phase + 1) % len(PHASE_NAMES)
-
-        self.next_decision = now + served + yellow
+        return record
 
     # -- views ---------------------------------------------------------------
     def live_snapshot(self):
@@ -399,6 +641,10 @@ def _build_handler(controller: MockController):
                     self._json(HTTPStatus.OK, latest)
             elif self.path == "/live":
                 self._json(HTTPStatus.OK, controller.live_snapshot())
+            elif self.path == "/signals":
+                self._json(HTTPStatus.OK, controller.signals_snapshot())
+            elif self.path == "/override":
+                self._json(HTTPStatus.OK, controller.get_override_status())
             elif self.path == "/config":
                 self._json(HTTPStatus.OK, controller.config)
             elif self.path == "/cameras":
@@ -410,10 +656,34 @@ def _build_handler(controller: MockController):
                     HTTPStatus.NOT_FOUND,
                     {
                         "error": "not found",
-                        "paths": ["/health", "/current", "/live", "/config", "/cameras",
-                                  "/snapshot/<movement>.jpg"],
+                        "paths": ["/health", "/current", "/live", "/signals", "/override",
+                                  "/config", "/cameras", "/snapshot/<movement>.jpg"],
                     },
                 )
+
+        def do_POST(self):  # noqa: N802
+            if self.path != "/override":
+                self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+                return
+            length = int(self.headers.get("Content-Length", "0") or 0)
+            body = self.rfile.read(length).decode("utf-8") if length else ""
+            try:
+                payload = json.loads(body)
+            except Exception:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "body must be valid JSON"})
+                return
+            try:
+                result = controller.request_override(payload)
+            except MockOverrideError as exc:
+                self._json(exc.status, {"error": exc.message})
+                return
+            self._json(HTTPStatus.ACCEPTED, result)
+
+        def do_DELETE(self):  # noqa: N802
+            if self.path != "/override":
+                self._json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+                return
+            self._json(HTTPStatus.ACCEPTED, controller.cancel_override())
 
         def _snapshot(self):
             movement = self.path[len("/snapshot/"):]
@@ -528,7 +798,8 @@ def main():
     server = ThreadingHTTPServer((args.host, args.port), _build_handler(controller))
     print(f"ANDAR mock controller on http://{args.host}:{args.port}")
     print(f"  runtime config: {config_path}")
-    print("  routes: /health /current /live GET|PUT /config /cameras /snapshot/<movement>.jpg")
+    print("  routes: /health /current /live /signals GET|POST|DELETE /override GET|PUT /config")
+    print("          /cameras /snapshot/<movement>.jpg")
     print("  source flag: simulated=true (the dashboard labels this 'Controller simulator')")
     try:
         server.serve_forever()
