@@ -91,10 +91,10 @@ weather yet. When it does, prefer that value — `src/weatherBridge.js` is the o
 place to change.
 
 The Overview weather card shows the controller's own three buckets —
-**Clear / Cloudy / Rainy** — so it cannot disagree with what the model saw. The
-exact WMO condition ("Overcast", "Light drizzle", "Thunderstorm, hail") sits
-underneath it and in Activity & logs, because it is finer-grained than the
-controller's vocabulary.
+**Clear / Cloudy / Rainy** — so it cannot disagree with what the model saw, with
+the temperature and wind speed underneath. The exact WMO condition ("Overcast",
+"Light drizzle", "Thunderstorm, hail") lives in Activity & logs, because it is
+finer-grained than the controller's vocabulary.
 
 If the API is unreachable the badge reads **Weather unavailable** rather than
 disappearing, so a missing forecast stays visible. Weather is independent of the

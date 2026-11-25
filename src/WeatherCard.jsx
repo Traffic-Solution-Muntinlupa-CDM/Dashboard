@@ -60,15 +60,10 @@ export default function WeatherCard({ weather }) {
       <p className="weather-temp">
         {temperature != null ? <>{temperature}<small>°C</small></> : <span className="weather-dash">—</span>}
       </p>
-      <p className="weather-meta">
-        {available
-          ? [
-            weather.condition,
-            weather.windKph != null ? `wind ${Math.round(weather.windKph)} km/h` : null,
-            'Open-Meteo',
-          ].filter(Boolean).join(' · ')
-          : weather ? weather.message : 'Reading the forecast'}
-      </p>
+      <div className="weather-extra">
+        <span>Wind</span>
+        <b>{available && weather.windKph != null ? `${Math.round(weather.windKph)} km/h` : '—'}</b>
+      </div>
     </section>
   );
 }

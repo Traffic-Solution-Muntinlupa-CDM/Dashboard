@@ -474,7 +474,7 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 210px;
+  min-height: 180px;
   padding: 16px 20px;
   background: #ffffff;
   border: 1px solid #bfd0de;
@@ -516,29 +516,43 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
 }
 .weather-temp small { margin-left: 2px; color: #526a7e; font-size: 16px; font-weight: 600; }
 .weather-dash { color: #8da6b9; }
-.weather-meta {
-  margin: 6px 0 0;
-  color: #718699;
+.weather-extra {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  border-top: 1px solid #e0e8ef;
+  padding-top: 9px;
+  color: #60768a;
   font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 11px;
-  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.weather-extra b {
+  color: #102a43;
+  font: 700 14px 'Archivo', sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .brief-heading {
   display: flex;
   justify-content: space-between;
   gap: 18px;
   align-items: flex-start;
-  padding-bottom: 22px;
+  padding-bottom: 18px;
   border-bottom: 1px solid #d5e1ea;
 }
 .brief-heading h2 { margin: 0; font: 700 21px/1.2 'Archivo', sans-serif; }
 .operational-brief .text-button { flex: 0 0 auto; color: #0b66b2; border-color: #7fb0d5; }
-.priority-item { margin: 22px 0 8px; padding: 4px 0 24px 18px; border-left: 3px solid #d98a2b; border-bottom: 1px solid #d5e1ea; }
+.priority-item { margin: 16px 0 8px; padding: 4px 0 18px 18px; border-left: 3px solid #d98a2b; border-bottom: 1px solid #d5e1ea; }
 .priority-item h3 { margin: 0 0 7px; color: #102a43; font: 700 20px 'Archivo', sans-serif; letter-spacing: -.015em; }
 .priority-item > strong { display: block; color: #8a541b; font-size: 14px; }
 .priority-item p { max-width: 34ch; margin: 12px 0 0; color: #60768a; font-size: 13px; line-height: 1.55; }
 .brief-status { margin-top: auto; padding-top: 10px; }
-.brief-status > div { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid #e0e8ef; }
+.brief-status > div { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e0e8ef; }
 .brief-status > div:last-child { border-bottom: 0; }
 .status-dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #8da6b9; }
 .status-dot.ok { background: #43d39e; }

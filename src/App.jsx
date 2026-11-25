@@ -433,13 +433,6 @@ export default function App() {
                 <p>{pedestrian.requestPresent ? `Waiting ${formatSeconds(pedestrian.pressAgeSeconds)}` : 'Button idle'}</p>
               </span>
             </div>
-            <div>
-              <span className={`status-dot ${connection.runtimeConfig ? 'ok' : ''}`} />
-              <span>
-                <b>{connection.runtimeConfig ? 'Runtime config mounted' : 'Runtime config not mounted'}</b>
-                <p>{connection.runtimeConfig ? 'Timing edits can be applied from Maintenance' : 'Boot the controller with the cv overlay to enable writes'}</p>
-              </span>
-            </div>
           </div>
         </section>
       </div>
