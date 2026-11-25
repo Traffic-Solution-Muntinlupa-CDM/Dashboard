@@ -405,6 +405,13 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   font: 750 28px/1.15 'Archivo', sans-serif;
   letter-spacing: -.025em;
 }
+.situation-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .situation-body {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(210px, .65fr);

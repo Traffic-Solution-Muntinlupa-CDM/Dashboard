@@ -4,7 +4,7 @@
 | --- | --- | --- | --- |
 | Improve the UI. | Neutral operator workspace, consistent cards, status badges, type hierarchy, responsive navigation, and visible focus treatment. | Shared shell and `src/index.css` | Frontend research prototype. |
 | Improve the dashboard UI and UX. | Reorganized information into Overview, Traffic analytics, Signal operations, Maintenance, and Activity & logs. | `src/App.jsx` navigation and pages | Live pages use the controller when reachable and clearly labelled example data otherwise. |
-| Make traffic conditions clearer. | Compact condition band, observed count, unserved time, queue status, phase remaining, approach summary, and attention list. | Overview | Counts are entering-edge sensor values; historical trends remain sample data. |
+| Make traffic conditions clearer. | Compact condition band, observed count, unserved time, queue status, phase remaining, intersection weather, approach summary, and attention list. | Overview | Counts are entering-edge sensor values; historical trends remain sample data. Weather comes from Open-Meteo at the intersection coordinates, the same provider the controller configures. |
 | Present historical performance more clearly. | Volume, waiting-time, queue, throughput, approach distribution, and peak-period charts. | Traffic analytics | Trend series are clearly badged sample data; there is no historical endpoint on the controller yet. |
 | Make signal operations understandable. | Active movement, schematic intersection, camera still for the active movement, sequence, duration, decision layer, and recent decisions. | Overview and Signal operations | Phase, duration, and source come from `GET /current`; the Overview still comes from `GET /snapshot/<movement>.jpg`. Lamp-level acknowledgement is still unavailable. |
 | Provide emergency maintenance configuration. | Timing guardrails, dispatch mode, presets, field-level diff, and component status. | Maintenance | Timing values write to the live `deploy_config.json` via `PUT /config`. All-red clearance (hardware.yaml) and emergency override have no backing on the controller and are shown read-only. |
@@ -32,3 +32,7 @@ sending frames (`503`).
 Historical trend charts have no live source and are badged **Sample series**.
 `waits{}` is unserved time rather than average vehicle delay and is labelled
 "Unserved".
+
+Weather is read from the public Open-Meteo API in the browser, at the same
+coordinates and with the same WMO→scalar mapping the controller uses. It is a
+forecast source, not a field sensor, and it is labelled that way.

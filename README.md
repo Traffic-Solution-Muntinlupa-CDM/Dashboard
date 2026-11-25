@@ -74,6 +74,27 @@ Camera stills are **not** the source of the approach counts. `/live` counts and
 a snapshot come from different paths, and the panel labels the device separately
 from the decision source.
 
+## Weather
+
+The Overview badge and the Activity row read **Open-Meteo** directly, at
+`VITE_WEATHER_LAT` / `VITE_WEATHER_LON` (defaults `14.4081`, `121.0415` — the
+intersection).
+
+That is deliberately the same provider and coordinate pair
+`deployed/config/cv.yaml` configures for `OpenMeteoWeatherSource`, on the same
+10-minute refresh window, and the WMO code is mapped to the controller's
+`-1 clear / 0 cloudy / 1 rainy` scalar with the same table
+(`cv/config.yaml` → `weather.py:_map_wmo`). No API key is involved.
+
+It is read in the browser rather than from the Pi because `/live` does not carry
+weather yet. When it does, prefer that value — `src/weatherBridge.js` is the one
+place to change.
+
+If the API is unreachable the badge reads **Weather unavailable** rather than
+disappearing, so a missing forecast stays visible. Weather is independent of the
+controller link: it keeps working while the Pi is away, and it is not a field
+sensor reading.
+
 ## Data honesty rules
 
 These are load-bearing; please keep them when changing the UI.
@@ -83,6 +104,9 @@ These are load-bearing; please keep them when changing the UI.
 - A camera still is never presented as live: the panel always shows the device,
   the capture age, and a stale warning. Frames the controller marks as simulated
   are labelled as such.
+- Weather is the same Open-Meteo source and coordinates the controller uses, but
+  it is a forecast API read independently — not a field sensor, and not proof of
+  the value the controller had cached.
 - `waits{}` is *seconds an edge has gone unserved*, not average vehicle delay —
   it is labelled "Unserved".
 - `queues{}` is a vehicle count; the queue label is derived from count bands.

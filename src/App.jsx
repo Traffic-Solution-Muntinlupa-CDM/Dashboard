@@ -25,6 +25,7 @@ import {
 import { POLL_INTERVAL_MS } from './piBridge';
 import { loadDashboardSnapshot, sourceMeta } from './dataSource';
 import { CAMERA_LIST_REFRESH_MS, loadCameras } from './cameraBridge';
+import { WEATHER_REFRESH_MS, loadWeather, weatherTone } from './weatherBridge';
 import Badge from './Badge';
 import CameraPanel from './CameraPanel';
 import MiniIntersection from './MiniIntersection';
@@ -138,6 +139,7 @@ export default function App() {
   const [page, setPage] = useState('overview');
   const [snapshot, setSnapshot] = useState(null);
   const [cameraInventory, setCameraInventory] = useState({ available: false, cameras: [] });
+  const [weather, setWeather] = useState(null);
   const [linkError, setLinkError] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -175,8 +177,29 @@ export default function App() {
     };
   }, []);
 
-  const refreshConfig = useCallback(async (signal) => {
-    setConfigState({ status: 'loading', message: '' });
+  // Weather comes straight from Open-Meteo — the same provider and coordinates
+  // the controller's cv.yaml uses — so it keeps working while the Pi is away.
+  useEffect(() => {
+    let alive = true;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const next = await loadWeather(controller.signal);
+        if (alive) setWeather(next);
+      } catch {
+        // Aborted on unmount; the next refresh recovers.
+      }
+    };
+    load();
+    const id = setInterval(load, WEATHER_REFRESH_MS);
+    return () => {
+      alive = false;
+      controller.abort();
+      clearInterval(id);
+    };
+  }, []);
+
+  const refreshConfig = useCallback(async (signal) => {    setConfigState({ status: 'loading', message: '' });
     try {
       const result = await loadRuntimeConfig(signal);
       if (!result.mounted) {
@@ -350,9 +373,16 @@ export default function App() {
             <span>Current condition</span>
             <h2>{live ? `${demand} demand` : 'Example demand'}</h2>
           </div>
-          <Badge tone={connection.controller ? 'ok' : 'offline'}>
-            {connection.controller ? (connection.simulated ? 'Simulator linked' : 'Controller linked') : 'Controller offline'}
-          </Badge>
+          <div className="situation-badges">
+            <Badge tone={connection.controller ? 'ok' : 'offline'}>
+              {connection.controller ? (connection.simulated ? 'Simulator linked' : 'Controller linked') : 'Controller offline'}
+            </Badge>
+            <Badge tone={weather?.available ? weatherTone(weather.scalar) : weather ? 'warning' : 'neutral'}>
+              {weather?.available
+                ? `${weather.condition}${weather.temperatureC != null ? ` · ${Math.round(weather.temperatureC)} °C` : ''}`
+                : weather ? 'Weather unavailable' : 'Weather…'}
+            </Badge>
+          </div>
         </div>
         <div className="situation-body">
           <CameraPanel
@@ -673,6 +703,14 @@ export default function App() {
   if (prefs.showServiceStatus) {
     activityRows.push(log(live ? 'ok' : 'offline', 'Data source', `${source.detail} Last poll ${updatedAt}.`, String(activityRows.length + 1).padStart(2, '0')));
   }
+  activityRows.push(log(
+    weather?.available ? weatherTone(weather.scalar) : 'offline',
+    'Weather',
+    weather?.available
+      ? `${weather.condition} · ${weather.temperatureC != null ? `${Math.round(weather.temperatureC)} °C` : 'temperature unavailable'}${weather.windKph != null ? ` · wind ${Math.round(weather.windKph)} km/h` : ''} — Open-Meteo at the intersection coordinates, the same provider the controller uses.`
+      : weather ? `Unavailable: ${weather.message}` : 'Loading the intersection weather…',
+    String(activityRows.length + 1).padStart(2, '0'),
+  ));
 
   const activity = <>
     <PageTitle
