@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Badge from './Badge';
 import ConfirmDialog from './ConfirmDialog';
 import Icon from './Icon';
@@ -7,6 +7,14 @@ import { PHASES } from './controllerContract';
 import { cancelOverride, startOverride } from './operatorApi';
 
 const DEFAULTS = { min: 15, max: 60, yellow: 10, allRed: 0 };
+
+// What the demo rig declares in hardware.yaml. Used only by preview mode when
+// no controller is reachable, so the builder looks and behaves like the real one.
+const PREVIEW_HEADS = [
+  { phase: 0, name: 'southbound', driver: 'ws2812' },
+  { phase: 2, name: 'northbound-remote', driver: 'esp32' },
+];
+const PREVIEW_TIMING = { min_green: 15, max_green: 60, yellow: 10, all_red: 0 };
 
 function clampGreen(seconds, min, max) {
   return Math.min(Math.max(seconds, min), max);
@@ -18,6 +26,70 @@ function requestSeconds(value) {
   return Math.min(120, Math.max(5, Math.round(number)));
 }
 
+/**
+ * Local mirror of the controller's program clock, for preview mode only.
+ * A step occupies green + yellow + all-red; cancel truncates to yellow + all-red.
+ */
+function previewStatus(program, nowMs, timing) {
+  const elapsed = (nowMs - program.startedAt) / 1000;
+  const yellow = Number(timing.yellow ?? DEFAULTS.yellow);
+  const allRed = Number(timing.all_red ?? DEFAULTS.allRed);
+  const minGreen = Number(timing.min_green ?? DEFAULTS.min);
+  const maxGreen = Number(timing.max_green ?? DEFAULTS.max);
+
+  const steps = program.steps.map((step) => ({
+    phase: step.phase,
+    seconds: clampGreen(requestSeconds(step.seconds), minGreen, maxGreen),
+  }));
+
+  const spans = [];
+  let cursor = 0;
+  for (const step of steps) {
+    const length = step.seconds + yellow + allRed;
+    spans.push({ start: cursor, end: cursor + length });
+    cursor += length;
+  }
+  const cycle = cursor || 1;
+
+  const locate = (position) => {
+    const wrapped = program.mode === 'loop'
+      ? position % cycle
+      : Math.min(Math.max(position, 0), cycle - 1e-6);
+    let index = spans.findIndex((span) => wrapped >= span.start && wrapped < span.end);
+    if (index < 0) index = spans.length - 1;
+    return { index, span: spans[index], wrapped };
+  };
+
+  if (program.cancelledAt != null) {
+    const remaining = program.cancelledAt + yellow + allRed - elapsed;
+    if (remaining <= 0) return { active: false };
+    const { index } = locate(program.cancelledAt);
+    return {
+      active: true,
+      cancelling: true,
+      mode: program.mode,
+      steps,
+      index,
+      step_remaining: Math.max(0, remaining),
+    };
+  }
+
+  if (program.mode === 'loop') {
+    if (elapsed >= program.maxDuration) return { active: false };
+  } else if (elapsed >= cycle) {
+    return { active: false };
+  }
+
+  const { index, span, wrapped } = locate(elapsed);
+  return {
+    active: true,
+    mode: program.mode,
+    steps,
+    index,
+    step_remaining: Math.max(0, span.end - wrapped),
+  };
+}
+
 export default function OperatorPage({ phase, signals, override, onStatusChange, controllerOnline }) {
   const [steps, setSteps] = useState([]);
   const [mode, setMode] = useState('once');
@@ -27,17 +99,33 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [warnings, setWarnings] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
 
-  const timing = signals?.timing ?? {};
+  const previewMode = !controllerOnline;
+  const activeSignals = previewMode
+    ? { available: true, heads: PREVIEW_HEADS, timing: PREVIEW_TIMING }
+    : signals;
+
+  const timing = activeSignals.timing ?? {};
   const minGreen = Number(timing.min_green ?? DEFAULTS.min);
   const maxGreen = Number(timing.max_green ?? DEFAULTS.max);
   const yellow = Number(timing.yellow ?? DEFAULTS.yellow);
   const allRed = Number(timing.all_red ?? DEFAULTS.allRed);
 
-  const headFor = (index) => signals?.heads?.find((head) => head.phase === index) ?? null;
-  const running = Boolean(override?.active);
-  const cancelling = Boolean(override?.cancelling);
-  const canEdit = !running && Boolean(signals?.available);
+  const headFor = (index) => activeSignals.heads?.find((head) => head.phase === index) ?? null;
+  const previewView = preview ? previewStatus(preview, now, timing) : null;
+  const view = previewMode ? previewView : override;
+  const running = Boolean(view?.active);
+  const cancelling = Boolean(view?.cancelling);
+  const canEdit = !running && Boolean(activeSignals.available);
+
+  // Preview mode is a local countdown, so it needs a clock of its own.
+  useEffect(() => {
+    if (!previewMode || !preview || !previewView?.active) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [previewMode, preview, previewView?.active]);
 
   const addStep = (index) => {
     setSteps((current) => [...current, { phase: index, seconds: 30 }]);
@@ -86,6 +174,30 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
         payload.max_duration_seconds = Math.max(60, Math.round(Number(maxMinutes) * 60) || 600);
       }
       if (reason.trim()) payload.reason = reason.trim();
+
+      if (previewMode) {
+        const previewWarnings = payload.steps.flatMap((step) => {
+          const applied = clampGreen(step.seconds, minGreen, maxGreen);
+          const list = [];
+          if (applied !== step.seconds) {
+            list.push(`phase ${step.phase}: green ${step.seconds}s clamped to ${applied}s (signal timing)`);
+          }
+          if (!headFor(step.phase)) list.push(`phase ${step.phase} has no head configured`);
+          return list;
+        });
+        setWarnings(previewWarnings);
+        setPreview({
+          steps: payload.steps,
+          mode: payload.mode,
+          startedAt: Date.now(),
+          maxDuration: payload.max_duration_seconds ?? 600,
+          cancelledAt: null,
+        });
+        setNow(Date.now());
+        setDialogOpen(false);
+        return;
+      }
+
       const result = await startOverride(payload);
       setWarnings(Array.isArray(result.warnings) ? result.warnings : []);
       setDialogOpen(false);
@@ -101,6 +213,12 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
     setBusy(true);
     setError('');
     try {
+      if (previewMode) {
+        setPreview((current) => (current
+          ? { ...current, cancelledAt: (Date.now() - current.startedAt) / 1000 }
+          : current));
+        return;
+      }
       await cancelOverride();
       await onStatusChange();
     } catch (err) {
@@ -112,9 +230,11 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
 
   const badge = running
     ? { tone: 'warning', label: cancelling ? 'Returning to policy' : 'Operator in control' }
-    : signals?.available
-      ? { tone: 'ok', label: 'Policy in control' }
-      : { tone: 'offline', label: 'Control unavailable' };
+    : previewMode
+      ? { tone: 'simulated', label: 'Preview mode' }
+      : activeSignals.available
+        ? { tone: 'ok', label: 'Policy in control' }
+        : { tone: 'offline', label: 'Control unavailable' };
 
   return (
     <>
@@ -124,6 +244,15 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
         badge={<Badge tone={badge.tone}>{badge.label}</Badge>}
       />
 
+      {previewMode && (
+        <div className="override-banner preview">
+          <div>
+            <b>Preview mode</b>
+            <span> — no controller connected. The program runs in this browser and nothing is sent to the Pi.</span>
+          </div>
+        </div>
+      )}
+
       <div className="control-grid">
         <Card className="control-card">
           <SectionHeading
@@ -132,11 +261,9 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
             description="Phases without a configured head stay selectable but hold red."
           />
 
-          {!signals?.available && (
+          {!activeSignals.available && (
             <p className="field-error">
-              {controllerOnline
-                ? (signals?.message ?? 'The controller rejected the operator request.')
-                : 'No controller link. The dashboard is showing example data — start the controller or the mock to use operator control.'}
+              {signals?.message ?? 'The controller rejected the operator request.'}
             </p>
           )}
 
@@ -248,15 +375,15 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
           {running ? (
             <>
               <div className="override-status">
-                <div><span>Mode</span><b>{override.mode === 'loop' ? 'Rotate' : 'Run once'}</b></div>
-                <div><span>Step</span><b>{override.index + 1} of {override.steps?.length ?? 0}</b></div>
-                <div><span>Phase</span><b>{PHASES[override.steps?.[override.index]?.phase] ?? '—'}</b></div>
-                <div><span>Step ends in</span><b>{Math.round(override.step_remaining ?? 0)} s</b></div>
+                <div><span>Mode</span><b>{view.mode === 'loop' ? 'Rotate' : 'Run once'}</b></div>
+                <div><span>Step</span><b>{view.index + 1} of {view.steps?.length ?? 0}</b></div>
+                <div><span>Phase</span><b>{PHASES[view.steps?.[view.index]?.phase] ?? '—'}</b></div>
+                <div><span>Ends in</span><b>{Math.round(view.step_remaining ?? 0)} s</b></div>
               </div>
 
               <ol className="step-list compact">
-                {(override.steps ?? []).map((step, index) => (
-                  <li className={`step-row ${index === override.index ? 'current' : ''}`} key={`${step.phase}-${index}`}>
+                {(view.steps ?? []).map((step, index) => (
+                  <li className={`step-row ${index === view.index ? 'current' : ''}`} key={`${step.phase}-${index}`}>
                     <span className="step-index">{String(index + 1).padStart(2, '0')}</span>
                     <span className="step-phase">{PHASES[step.phase]}</span>
                     <span className="step-unit">{Math.round(step.seconds)} s</span>
@@ -275,9 +402,11 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
             <div className="control-idle">
               <p>No operator program is running.</p>
               <p className="field-note">
-                {signals?.available
-                  ? `The policy is choosing phases. Green is clamped to ${minGreen}–${maxGreen} s by the signal heads.`
-                  : 'The operator endpoints are unavailable, so the policy keeps control.'}
+                {previewMode
+                  ? 'Preview countdown finished. The policy would be back in control.'
+                  : activeSignals.available
+                    ? `The policy is choosing phases. Green is clamped to ${minGreen}–${maxGreen} s by the signal heads.`
+                    : 'The operator endpoints are unavailable, so the policy keeps control.'}
               </p>
             </div>
           )}

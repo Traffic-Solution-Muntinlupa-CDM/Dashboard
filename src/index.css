@@ -775,6 +775,8 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
 }
 .override-banner b { color: #8b4d0d; }
 .override-banner.cancelling { background: #eef3f8; border-left-color: #8da6b9; }
+.override-banner.preview { background: #eef6fc; border-left-color: #0b66b2; color: #27445c; }
+.override-banner.preview b { color: #0b66b2; }
 
 @media (max-width: 1100px) {
   .control-grid { grid-template-columns: 1fr; }
