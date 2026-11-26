@@ -757,6 +757,7 @@ export default function App() {
       signals={signals}
       override={override}
       onStatusChange={refreshOverride}
+      controllerOnline={controllerOnline}
     />
   );
 

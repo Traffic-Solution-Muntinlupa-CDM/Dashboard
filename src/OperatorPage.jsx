@@ -18,7 +18,7 @@ function requestSeconds(value) {
   return Math.min(120, Math.max(5, Math.round(number)));
 }
 
-export default function OperatorPage({ phase, signals, override, onStatusChange }) {
+export default function OperatorPage({ phase, signals, override, onStatusChange, controllerOnline }) {
   const [steps, setSteps] = useState([]);
   const [mode, setMode] = useState('once');
   const [maxMinutes, setMaxMinutes] = useState(10);
@@ -133,7 +133,11 @@ export default function OperatorPage({ phase, signals, override, onStatusChange 
           />
 
           {!signals?.available && (
-            <p className="field-error">{signals?.message ?? 'Operator control is unavailable on this controller.'}</p>
+            <p className="field-error">
+              {controllerOnline
+                ? (signals?.message ?? 'The controller rejected the operator request.')
+                : 'No controller link. The dashboard is showing example data — start the controller or the mock to use operator control.'}
+            </p>
           )}
 
           <div className="phase-picker">
