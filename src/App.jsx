@@ -71,8 +71,15 @@ const nav = [
   ['activity', 'Activity & logs', 'log'],
 ];
 
-const chartTooltip = {
-  background: '#ffffff',
+const LOG_LABELS = {
+  ok: 'Operational',
+  warning: 'Advisory',
+  neutral: 'System',
+  offline: 'Unconfirmed',
+  simulated: 'Simulated',
+};
+
+const chartTooltip = {  background: '#ffffff',
   border: '1px solid #9eb4c6',
   borderRadius: 4,
   boxShadow: '0 8px 24px rgba(16, 42, 67, .12)',
@@ -171,6 +178,12 @@ export default function App() {
       clearInterval(id);
     };
   }, []);
+
+  // Each page replaces the one before it in the same scroll container; start at
+  // the top instead of inheriting the previous page's position.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [page]);
 
   const refreshConfig = useCallback(async (signal) => {
     setConfigState({ status: 'loading', message: '' });
@@ -383,7 +396,7 @@ export default function App() {
 
   const log = (type, title, description, index = '—', time = 'Recent') => (    <div className="log-row" key={`${index}-${title}`}>
       <span className="log-index">{index}</span>
-      <Badge tone={type}>{type}</Badge>
+      <Badge tone={type}>{LOG_LABELS[type] ?? type}</Badge>
       <div><strong>{title}</strong><p>{description}</p></div>
       <time>{time}</time>
     </div>
