@@ -15,10 +15,12 @@ import {
 } from 'recharts';
 import {
   APPROACHES,
+  ASPECT_LABELS,
   PEDESTRIAN_PHASE,
   PHASES,
   describeSource,
   formatSeconds,
+  phaseAspect,
   queueBand,
   queueTone,
 } from './controllerContract';
@@ -227,6 +229,22 @@ export default function App() {
   const live = Boolean(snapshot?.available) && sourceKind !== 'example';  const decision = snapshot?.controllerDecision ?? null;
   const connection = snapshot?.connection ?? { status: 'unreachable' };
 
+  // The lamp aspect is not in /live: it is derived from the decision record's
+  // ts + duration + yellow, which is the same arithmetic the signals layer uses.
+  // A local clock keeps the countdown smooth between the 3 s polls.
+  const phase = decision?.phase ?? null;
+  const issuedAt = decision?.issuedAt ?? null;
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (issuedAt == null) return undefined;
+    const id = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [issuedAt]);
+  const aspect = phaseAspect(decision, clock, signals?.timing?.all_red ?? 0);
+  const aspectLabel = aspect.aspect === 'green'
+    ? (phase === PEDESTRIAN_PHASE ? 'Walk' : 'Green')
+    : aspect.aspect ? ASPECT_LABELS[aspect.aspect] : null;
+
   const controllerOnline = Boolean(connection.controller);
 
   // Camera inventory is optional and slow-moving: refresh it every 30 s and
@@ -306,9 +324,7 @@ export default function App() {
     };
   }, [signedIn, controllerOnline]);
 
-  const phase = decision?.phase ?? null;
   const greenSeconds = decision?.greenSeconds ?? null;
-  const remainingSeconds = decision?.remainingSeconds ?? null;
   const phaseSource = decision ? describeSource(decision.source, decision.overrideReason) : 'No decision received yet';
   const pedestrian = snapshot?.pedestrian ?? { requestPresent: false, pressAgeSeconds: null };
 
@@ -410,7 +426,8 @@ export default function App() {
     setSignals({ available: false, heads: [], timing: {} });
   };
 
-  const log = (type, title, description, index = '—', time = 'Recent') => (    <div className="log-row" key={`${index}-${title}`}>
+  const log = (type, title, description, index = '—', time = 'Recent') => (
+    <div className="log-row" key={`${index}-${title}`}>
       <span className="log-index">{index}</span>
       <Badge tone={type}>{LOG_LABELS[type] ?? type}</Badge>
       <div><strong>{title}</strong><p>{description}</p></div>
@@ -440,15 +457,15 @@ export default function App() {
             cameras={cameraInventory.cameras}
             camerasKnown={cameraInventory.available}
           />
-          <div className="phase-focus">
-            <span className={`phase-light ${phase ? '' : 'idle'}`} />
+          <div className={`phase-focus ${aspect.aspect ?? ''}`}>
+            <span className={`phase-light ${aspect.aspect ?? 'idle'}`} />
             <p>Active movement</p>
             <strong>{phase ?? '—'}</strong>
-            {phase && <h3>{phase === PEDESTRIAN_PHASE ? 'Walk' : 'Green'}</h3>}
+            {aspectLabel && <h3>{aspectLabel}</h3>}
             <div>
-              <span>Phase duration</span>
-              <b>{remainingSeconds != null && greenSeconds != null
-                ? `${Math.round(remainingSeconds)} s left of ${Math.round(greenSeconds)} s`
+              <span>{aspect.aspect === 'yellow' ? 'Yellow interval' : aspect.aspect === 'clearance' ? 'Clearance' : 'Phase duration'}</span>
+              <b>{aspect.remaining != null
+                ? `${Math.ceil(aspect.remaining)} s${aspect.total ? ` of ${Math.round(aspect.total)} s` : ''}`
                 : formatSeconds(greenSeconds)}</b>
             </div>
             <div><span>Decision source</span><b>{phaseSource}</b></div>
@@ -457,7 +474,7 @@ export default function App() {
         <div className="summary-metrics">
           <div><strong>{reporting ? total : '—'}</strong><span>Observed vehicles</span><p>{reporting} of 5 entering edges reporting</p></div>
           <div><strong>{longestWait != null ? <>{Math.round(longestWait)} <small>s</small></> : '—'}</strong><span>Longest unserved</span><p>Wait accrued on one approach</p></div>
-          <div><strong>{greenSeconds != null ? <>{Math.round(remainingSeconds ?? greenSeconds)} <small>s</small></> : '—'}</strong><span>Phase remaining</span><p>{greenSeconds != null ? `of ${Math.round(greenSeconds)} s requested` : 'No decision yet'}</p></div>
+          <div><strong>{aspect.remaining != null ? <>{Math.ceil(aspect.remaining)} <small>s</small></> : '—'}</strong><span>{aspect.aspect === 'yellow' ? 'Yellow remaining' : aspect.aspect === 'clearance' ? 'Clearance remaining' : 'Phase remaining'}</span><p>{aspect.aspect === 'green' ? `of ${Math.round(aspect.total)} s green requested` : aspect.aspect === 'yellow' ? 'Amber interval' : greenSeconds != null ? `of ${Math.round(greenSeconds)} s requested` : 'No decision yet'}</p></div>
         </div>
       </section>
       <div className="brief-column">
@@ -546,11 +563,13 @@ export default function App() {
           cameras={cameraInventory.cameras}
           camerasKnown={cameraInventory.available}
         />
-        <div className="operation-callout">
-          {connection.status === 'live' && <Badge tone="ok">Active</Badge>}
-          <h2>{phase ? `${phase} ${phase === PEDESTRIAN_PHASE ? 'WALK' : 'GREEN'}` : 'No decision yet'}</h2>
-          <p>Reported by the controller</p>
-          <strong>{remainingSeconds != null ? `${Math.round(remainingSeconds)} s remaining` : formatSeconds(greenSeconds)}</strong>
+        <div className={`operation-callout ${aspect.aspect ?? ''}`}>
+          {connection.status === 'live' && (
+            <Badge tone={aspect.aspect === 'yellow' ? 'warning' : aspect.aspect === 'clearance' ? 'offline' : 'ok'}>Active</Badge>
+          )}
+          <h2>{phase ? `${phase} ${(aspectLabel ?? '').toUpperCase()}` : 'No decision yet'}</h2>
+          <p>From the controller's decision record</p>
+          <strong>{aspect.remaining != null ? `${Math.ceil(aspect.remaining)} s remaining` : formatSeconds(greenSeconds)}</strong>
         </div>
       </Card>
       <Card>
@@ -705,7 +724,7 @@ export default function App() {
   </>;
 
   const activityRows = [
-    log('ok', 'Signal state updated', `${phase} is the active movement at ${formatSeconds(greenSeconds)}.`, '01'),
+    log('ok', 'Signal state updated', `${phase ?? 'No decision yet'} — ${aspectLabel ?? 'no live aspect'}${aspect.remaining != null ? ` · ${Math.ceil(aspect.remaining)} s left` : ''}.`, '01'),
     log(
       decision?.source === 'policy' ? 'neutral' : 'warning',
       'Controller decision layer',

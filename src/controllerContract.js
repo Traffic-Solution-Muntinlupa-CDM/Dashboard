@@ -107,3 +107,38 @@ export function formatSeconds(value, fallback = '—') {
   const number = Number(value);
   return Number.isFinite(number) ? `${Math.round(number)} s` : fallback;
 }
+
+/**
+ * Which aspect the lamps are showing right now, derived from the decision
+ * record. The record carries the green duration and the yellow; the signals
+ * layer runs green -> yellow -> clearance and then waits for the next record,
+ * which is emitted at duration + yellow. `issuedAt` is only set when the
+ * controller's timestamps are wall clock (not a sim clock).
+ */
+export function phaseAspect(decision, nowMs, allRedSeconds = 0) {
+  if (!decision || decision.issuedAt == null || decision.greenSeconds == null) {
+    return { aspect: null, remaining: null, total: null };
+  }
+  const green = Number(decision.greenSeconds);
+  const yellow = Number(decision.yellowSeconds ?? 0);
+  const allRed = Math.max(0, Number(allRedSeconds) || 0);
+  const elapsed = Math.max(0, nowMs / 1000 - decision.issuedAt);
+
+  if (elapsed < green) {
+    return { aspect: 'green', remaining: green - elapsed, total: green };
+  }
+  if (elapsed < green + yellow) {
+    return { aspect: 'yellow', remaining: green + yellow - elapsed, total: yellow };
+  }
+  if (elapsed < green + yellow + allRed) {
+    return { aspect: 'clearance', remaining: green + yellow + allRed - elapsed, total: allRed };
+  }
+  return { aspect: 'waiting', remaining: 0, total: 0 };
+}
+
+export const ASPECT_LABELS = {
+  green: 'Green',
+  yellow: 'Yellow',
+  clearance: 'Clearance',
+  waiting: 'Waiting',
+};

@@ -445,6 +445,15 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   box-shadow: 0 0 0 6px #43d39e25;
 }
 .phase-light.idle { background: #8da6b9; box-shadow: 0 0 0 6px #8da6b925; }
+.phase-light.yellow { background: #f2b544; box-shadow: 0 0 0 6px #f2b54425; }
+.phase-light.clearance { background: #e2686f; box-shadow: 0 0 0 6px #e2686f25; }
+.phase-focus.yellow > h3 { color: #f5c258; }
+.phase-focus.clearance > h3 { color: #f0969b; }
+.phase-focus.waiting > h3 { color: #b9c7d3; }
+.operation-callout.yellow { border-left-color: #d98a2b; }
+.operation-callout.yellow strong { color: #a45f14; }
+.operation-callout.clearance { border-left-color: #a5454f; }
+.operation-callout.clearance strong { color: #a5454f; }
 .phase-focus > p { margin: 0 0 7px; color: #bdd7eb; font-size: 13px; }
 .phase-focus > strong { font: 700 25px/1.1 'Archivo', sans-serif; }
 .phase-focus > h3 { margin: 2px 0 28px; color: #57e0aa; font: 750 36px/1 'Archivo', sans-serif; }

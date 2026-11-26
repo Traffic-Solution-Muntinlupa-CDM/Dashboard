@@ -180,7 +180,7 @@ function normalizeDecision(record) {
     elapsedSeconds,
     remainingSeconds,
     phaseProbabilities: Array.isArray(record.phase_probs) ? record.phase_probs : null,
-    issuedAt,
+    issuedAt: wallClock ? issuedAt : null,
     semantics: 'Controller decision record; not a camera or field acknowledgement.',
   };
 }
