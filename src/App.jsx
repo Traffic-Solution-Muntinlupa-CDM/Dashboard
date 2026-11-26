@@ -31,7 +31,6 @@ import CameraPanel from './CameraPanel';
 import ConfirmDialog from './ConfirmDialog';
 import Icon from './Icon';
 import LoginPage from './LoginPage';
-import MiniIntersection from './MiniIntersection';
 import OperatorPage from './OperatorPage';
 import WeatherCard from './WeatherCard';
 import { Card, PageTitle, SectionHeading } from './layout';
@@ -48,10 +47,7 @@ import {
   saveRuntimeConfig,
 } from './configApi';
 
-// Illustrative values used only when no live source is reachable. The source
-// banner and every page heading say so explicitly.
-const EXAMPLE_COUNTS = { Northbound: 128, Southbound: 104, Brudger: 86, Estanislao: 72, 'City Hall': 54 };
-const EXAMPLE_WAITS = { Northbound: 38, Southbound: 29, Brudger: 42, Estanislao: 21, 'City Hall': 35 };
+// Illustrative values only where a page has no live source at all.
 
 const trend = [
   { time: '07:00', volume: 220, wait: 19, queue: 7, throughput: 196 },
@@ -291,7 +287,7 @@ export default function App() {
     };
   }, [signedIn, controllerOnline]);
 
-  const phase = decision?.phase ?? 'Northbound';
+  const phase = decision?.phase ?? null;
   const greenSeconds = decision?.greenSeconds ?? null;
   const remainingSeconds = decision?.remainingSeconds ?? null;
   const phaseSource = decision ? describeSource(decision.source, decision.overrideReason) : 'No decision received yet';
@@ -299,21 +295,22 @@ export default function App() {
 
   const rows = useMemo(() => APPROACHES.map((approach) => {
     const observed = snapshot?.approaches?.find((item) => item.name === approach.name);
-    const count = observed?.observedVehicles ?? (live ? null : EXAMPLE_COUNTS[approach.name]);
-    const wait = observed?.waitSeconds ?? (live ? null : EXAMPLE_WAITS[approach.name]);
+    const count = observed?.observedVehicles ?? null;
+    const wait = observed?.waitSeconds ?? null;
     return {
       ...approach,
       count,
       waitSeconds: wait,
-      queue: count == null ? 'Unknown' : queueBand(count),
+      queue: count == null ? null : queueBand(count),
     };
-  }), [snapshot, live]);
+  }), [snapshot]);
 
   const reporting = rows.filter((row) => row.count != null).length;
   const total = rows.reduce((sum, row) => sum + (row.count ?? 0), 0);
   const averageCount = reporting ? total / reporting : 0;
   const demand = averageCount >= 12 ? 'High' : averageCount >= 6 ? 'Moderate' : 'Light';
-  const longestWait = rows.reduce((max, row) => Math.max(max, row.waitSeconds ?? 0), 0);
+  const waits = rows.map((row) => row.waitSeconds).filter((value) => value != null);
+  const longestWait = waits.length ? Math.max(...waits) : null;
   const busiest = [...rows].sort((a, b) => (b.count ?? 0) - (a.count ?? 0))[0];
   const overrides = useMemo(() => configOverrides(config), [config]);
   const updatedAt = snapshot?.generatedAt ? new Date(snapshot.generatedAt).toLocaleTimeString() : '—';
@@ -414,22 +411,21 @@ export default function App() {
         <div className="situation-heading">
           <div>
             <span>Current condition</span>
-            <h2>{live ? `${demand} demand` : 'Example demand'}</h2>
+            <h2>{live ? `${demand} demand` : 'No live data'}</h2>
           </div>
         </div>
         <div className="situation-body">
           <CameraPanel
-            key={phase}
+            key={phase ?? 'none'}
             phase={phase}
-            sourceLabel={source.short}
             cameras={cameraInventory.cameras}
             camerasKnown={cameraInventory.available}
           />
           <div className="phase-focus">
-            <span className="phase-light" />
+            <span className={`phase-light ${phase ? '' : 'idle'}`} />
             <p>Active movement</p>
-            <strong>{phase}</strong>
-            <h3>{phase === PEDESTRIAN_PHASE ? 'Walk' : 'Green'}</h3>
+            <strong>{phase ?? '—'}</strong>
+            {phase && <h3>{phase === PEDESTRIAN_PHASE ? 'Walk' : 'Green'}</h3>}
             <div>
               <span>Phase duration</span>
               <b>{remainingSeconds != null && greenSeconds != null
@@ -441,8 +437,8 @@ export default function App() {
         </div>
         <div className="summary-metrics">
           <div><strong>{reporting ? total : '—'}</strong><span>Observed vehicles</span><p>{reporting} of 5 entering edges reporting</p></div>
-          <div><strong>{longestWait ? Math.round(longestWait) : 0} <small>s</small></strong><span>Longest unserved</span><p>Wait accrued on one approach</p></div>
-          <div><strong>{greenSeconds != null ? Math.round(remainingSeconds ?? greenSeconds) : '—'} <small>s</small></strong><span>Phase remaining</span><p>{greenSeconds != null ? `of ${Math.round(greenSeconds)} s requested` : 'No decision yet'}</p></div>
+          <div><strong>{longestWait != null ? <>{Math.round(longestWait)} <small>s</small></> : '—'}</strong><span>Longest unserved</span><p>Wait accrued on one approach</p></div>
+          <div><strong>{greenSeconds != null ? <>{Math.round(remainingSeconds ?? greenSeconds)} <small>s</small></> : '—'}</strong><span>Phase remaining</span><p>{greenSeconds != null ? `of ${Math.round(greenSeconds)} s requested` : 'No decision yet'}</p></div>
         </div>
       </section>
       <div className="brief-column">
@@ -461,8 +457,10 @@ export default function App() {
             <div>
               <span className={`status-dot ${connection.controller ? 'ok' : ''}`} />
               <span>
-                <b>{source.short}</b>
-                <p>{connection.status === 'awaiting-decision' ? 'Reachable, waiting for its first decision' : source.detail}</p>
+                <b>{live ? source.short : 'No controller link'}</b>
+                <p>{connection.status === 'awaiting-decision'
+                  ? 'Reachable, waiting for its first decision'
+                  : live ? source.detail : 'Values appear once the controller answers.'}</p>
               </span>
             </div>
             <div>
@@ -486,7 +484,7 @@ export default function App() {
           <span className="approach-name"><i /><strong>{row.name}</strong></span>
           <span>{row.count ?? '—'}</span>
           <span>{formatSeconds(row.waitSeconds)}</span>
-          <Badge tone={queueTone(row.queue)}>{row.queue}</Badge>
+          {row.queue ? <Badge tone={queueTone(row.queue)}>{row.queue}</Badge> : <span>—</span>}
         </div>)}
       </div>
     </section>
@@ -522,11 +520,16 @@ export default function App() {
     />
     <div className="operations-grid">
       <Card className="operation-map">
-        <SectionHeading code="LIVE SCHEMATIC / 01" title="Selected movement" />
-        <MiniIntersection phase={phase} caption={source.short} />
+        <SectionHeading code="LIVE VIEW / 01" title="Selected movement" />
+        <CameraPanel
+          key={phase ?? 'none'}
+          phase={phase}
+          cameras={cameraInventory.cameras}
+          camerasKnown={cameraInventory.available}
+        />
         <div className="operation-callout">
-          <Badge tone={live ? 'ok' : 'warning'}>{connection.status === 'live' ? 'Active' : connection.status}</Badge>
-          <h2>{phase} {phase === PEDESTRIAN_PHASE ? 'WALK' : 'GREEN'}</h2>
+          {connection.status === 'live' && <Badge tone="ok">Active</Badge>}
+          <h2>{phase ? `${phase} ${phase === PEDESTRIAN_PHASE ? 'WALK' : 'GREEN'}` : 'No decision yet'}</h2>
           <p>Reported by the controller</p>
           <strong>{remainingSeconds != null ? `${Math.round(remainingSeconds)} s remaining` : formatSeconds(greenSeconds)}</strong>
         </div>

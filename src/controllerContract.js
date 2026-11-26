@@ -103,6 +103,7 @@ export function describeSource(source, overrideReason) {
 }
 
 export function formatSeconds(value, fallback = '—') {
+  if (value == null || value === '') return fallback;
   const number = Number(value);
   return Number.isFinite(number) ? `${Math.round(number)} s` : fallback;
 }

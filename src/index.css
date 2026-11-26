@@ -447,6 +447,7 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   background: #43d39e;
   box-shadow: 0 0 0 6px #43d39e25;
 }
+.phase-light.idle { background: #8da6b9; box-shadow: 0 0 0 6px #8da6b925; }
 .phase-focus > p { margin: 0 0 7px; color: #bdd7eb; font-size: 13px; }
 .phase-focus > strong { font: 700 25px/1.1 'Archivo', sans-serif; }
 .phase-focus > h3 { margin: 2px 0 28px; color: #57e0aa; font: 750 36px/1 'Archivo', sans-serif; }
@@ -855,6 +856,10 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
 .primary { background: #075a9c; border-color: #075a9c; }
 .primary:hover { background: #06487c; box-shadow: 3px 3px 0 #8bc8f1; }
 
+@media (max-width: 1400px) {
+  .operations-grid { grid-template-columns: 1fr 1fr; }
+  .operations-grid > :last-child { grid-column: 1 / -1; }
+}
 @media (max-width: 1100px) {
   .overview-stage { grid-template-columns: 1fr; }
   .operational-brief { min-height: 430px; }
@@ -1107,27 +1112,35 @@ aside nav button > span {
   text-transform: uppercase;
   text-shadow: 0 1px 3px #00000080;
 }
-.camera-fallback { position: relative; height: 100%; }
-.camera-fallback .intersection { height: 100%; }
-.camera-state {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  max-width: 74%;
-  margin: 0;
-  border-left: 3px solid var(--amber);
-  padding: 5px 8px;
-  background: #ffffffe8;
-  color: #526a7e;
+.camera-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #aebfcd;
+  border-radius: 4px 0 0 4px;
+  background: #f3f7fb;
+  text-align: center;
+}
+.camera-empty span {
+  color: #60768a;
   font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 11px;
-  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
-.camera-state b { color: #27445c; }
+.camera-empty b {
+  color: #27445c;
+  font-family: 'Archivo', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
 
 @media (max-width: 820px) {
-  .camera-panel, .camera-fallback { height: 260px; }
-  .camera-fallback .intersection { height: 260px; }
-  .camera-frame { border-radius: 4px 4px 0 0; }
+  .camera-panel { height: 260px; }
+  .camera-frame, .camera-empty { border-radius: 4px 4px 0 0; }
 }
 

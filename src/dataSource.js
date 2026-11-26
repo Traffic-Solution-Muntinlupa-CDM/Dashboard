@@ -24,8 +24,8 @@ export const SOURCE_LABELS = {
     tone: 'simulated',
   },
   example: {
-    short: 'Example data',
-    detail: 'No live source reachable. Values on this page are illustrative.',
+    short: 'No controller',
+    detail: 'No live source is reachable; values are unavailable.',
     tone: 'warning',
   },
 };
@@ -81,7 +81,7 @@ export async function loadDashboardSnapshot(signal) {
     generatedAt: new Date().toISOString(),
     message: controllerFailure
       ? `Controller unavailable (${controllerFailure}); no local simulation log found either.`
-      : 'No live source is reachable. Values on this page are illustrative.',
+      : 'No live source is reachable.',
     connection: {
       status: 'unreachable',
       controller: false,

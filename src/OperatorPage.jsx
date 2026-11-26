@@ -152,7 +152,7 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
                   title={head ? `Head: ${head.name} (${head.driver})` : 'No head configured — lamps hold red'}
                 >
                   <b>{name}</b>
-                  <small>{head ? head.name : signals?.available ? 'no head' : '—'}</small>
+                  <small>{head ? head.name : 'no head'}</small>
                 </button>
               );
             })}

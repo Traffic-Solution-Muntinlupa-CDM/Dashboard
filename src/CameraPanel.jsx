@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Badge from './Badge';
-import MiniIntersection from './MiniIntersection';
 import { movementSlug } from './controllerContract';
 import { CAMERA_REFRESH_MS, FRAME_STALE_MS, loadCameraFrame } from './cameraBridge';
 
 const STATE_COPY = {
-  loading: 'Reading still from the controller…',
-  absent: 'No camera for this movement',
-  unavailable: 'Camera configured, but not sending frames',
-  error: 'Camera request failed',
+  loading: 'Loading camera…',
+  absent: 'Camera not available',
+  unavailable: 'Camera offline',
+  error: 'Camera not available',
 };
 
 function formatAge(seconds) {
@@ -26,7 +25,7 @@ function formatAge(seconds) {
  * comes from the controller, so a frozen or stale image is visible as such
  * instead of quietly passing for live footage.
  */
-export default function CameraPanel({ phase, sourceLabel, cameras, camerasKnown }) {
+export default function CameraPanel({ phase, cameras, camerasKnown }) {
   const slug = movementSlug(phase);
   const camera = cameras.find((entry) => entry.movement === slug) ?? null;
   // When the controller publishes its camera inventory, a movement that is not
@@ -113,14 +112,9 @@ export default function CameraPanel({ phase, sourceLabel, cameras, camerasKnown 
 
   return (
     <div className="camera-panel">
-      <div className="camera-fallback">
-        <MiniIntersection phase={phase} caption={sourceLabel} />
-        <p className="camera-state">
-          <b>{STATE_COPY[status] ?? STATE_COPY.error}</b>
-          {status === 'absent' && ' — showing the schematic instead.'}
-          {status === 'unavailable' && ' — the schematic stands in until a frame arrives.'}
-          {status === 'error' && ` — ${frame.message ?? 'request failed'}.`}
-        </p>
+      <div className="camera-empty">
+        <span>{phase ?? 'No decision yet'}</span>
+        <b>{STATE_COPY[status] ?? STATE_COPY.error}</b>
       </div>
     </div>
   );
