@@ -83,7 +83,7 @@ const chartTooltip = {
 function Chart({ dataKey, color, title, unit }) {
   return (
     <Card className="chart">
-      <SectionHeading title={title} action={<Badge tone="warning">Sample series</Badge>} />
+      <SectionHeading title={title} />
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={trend}>
           <defs>
@@ -196,8 +196,7 @@ export default function App() {
   // -- derived view state ---------------------------------------------------
   const sourceKind = snapshot?.sourceKind ?? 'example';
   const source = sourceMeta(sourceKind);
-  const live = Boolean(snapshot?.available) && sourceKind !== 'example';
-  const decision = snapshot?.controllerDecision ?? null;
+  const live = Boolean(snapshot?.available) && sourceKind !== 'example';  const decision = snapshot?.controllerDecision ?? null;
   const connection = snapshot?.connection ?? { status: 'unreachable' };
 
   const controllerOnline = Boolean(connection.controller);
@@ -390,24 +389,12 @@ export default function App() {
     </div>
   );
 
-  const sourceBanner = (
-    <div className={`source-banner ${source.tone === 'warning' ? 'warning' : live ? 'ok' : ''}`}>
-      <b>{source.short}</b> — {source.detail}
-      {snapshot?.message ? ` ${snapshot.message}` : ''}
-      {linkError ? ` Poll failed: ${linkError}` : ''}
-      <span> Last poll {updatedAt}.</span>
-    </div>
-  );
-
   const overview = <>
     <div className="overview-title">
       <div>
         <h1>Intersection overview</h1>
         <p>Current traffic conditions and signal activity at the ANDAR intersection.</p>
       </div>
-      <Badge tone={live ? 'ok' : 'warning'}>
-        {live ? `${reporting} of 5 feeds reporting` : 'Example dataset'}
-      </Badge>
     </div>
     <div className="overview-stage">
       <section className="situation">
@@ -416,9 +403,6 @@ export default function App() {
             <span>Current condition</span>
             <h2>{live ? `${demand} demand` : 'Example demand'}</h2>
           </div>
-          <Badge tone={connection.controller ? 'ok' : 'offline'}>
-            {connection.controller ? (connection.simulated ? 'Simulator linked' : 'Controller linked') : 'Controller offline'}
-          </Badge>
         </div>
         <div className="situation-body">
           <CameraPanel
@@ -482,7 +466,6 @@ export default function App() {
     <section className="approach-section">
       <div className="approach-heading">
         <div><h2>Approach conditions</h2><p>Latest sampled state per incoming movement</p></div>
-        <Badge tone={live ? 'ok' : 'warning'}>{live ? `Polled ${updatedAt}` : 'Example values'}</Badge>
       </div>
       <div className="approach-list">
         <div className="approach-list-head"><span>Approach</span><span>Vehicles</span><span>Unserved</span><span>Queue</span></div>
@@ -499,8 +482,7 @@ export default function App() {
   const analytics = <>
     <PageTitle
       title="Traffic performance"
-      description="Volume, waiting time, queues, and throughput across the morning period."
-      badge={<Badge tone="warning">Historical series is sample data</Badge>}
+      description="Volume, waiting time, queues, and throughput across the morning period. Historical series are example data."
     />
     <div className="chart-grid">
       <Chart dataKey="volume" color="#146b55" title="Traffic volume" />
@@ -514,7 +496,7 @@ export default function App() {
         <ResponsiveContainer width="100%" height={260}><PieChart><Pie data={rows} dataKey="count" nameKey="name" innerRadius={62} outerRadius={98} paddingAngle={1}>{rows.map((row) => <Cell key={row.name} fill={row.color} />)}</Pie><Tooltip contentStyle={chartTooltip} /></PieChart></ResponsiveContainer>
       </Card>
       <Card>
-        <SectionHeading code="A / 06" title="Peak-period comparison" action={<Badge tone="warning">Sample series</Badge>} />
+        <SectionHeading code="A / 06" title="Peak-period comparison" />
         <ResponsiveContainer width="100%" height={260}><BarChart data={trend}><CartesianGrid vertical={false} stroke="#d8d5c8" strokeDasharray="2 5" /><XAxis dataKey="time" tickLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip contentStyle={chartTooltip} /><Bar dataKey="volume" fill="#146b55" /><Bar dataKey="throughput" fill="#9fb9ab" /></BarChart></ResponsiveContainer>
       </Card>
     </div>
@@ -524,7 +506,6 @@ export default function App() {
     <PageTitle
       title="Signal operations"
       description="Current movement, phase duration, sequence, and the controller's latest decision."
-      badge={<Badge tone={live ? 'ok' : 'warning'}>{source.short}</Badge>}
     />
     <div className="operations-grid">
       <Card className="operation-map">
@@ -742,7 +723,6 @@ export default function App() {
     <PageTitle
       title="Activity and system logs"
       description="Recent controller, configuration, and data-source events for this session."
-      badge={<Badge tone={live ? 'ok' : 'warning'}>{source.short}</Badge>}
     />
     <Card className="log-card">
       <SectionHeading code="EVENT REGISTER / 05" title="Recent activity" description="Rows below are derived from the current session and its live link." />
@@ -776,7 +756,6 @@ export default function App() {
         </button>
         <div className="city-name">Muntinlupa City</div>
         <div className="header-controls">
-          <Badge tone={source.tone}>{source.short}</Badge>
           <button className="header-signout" onClick={handleSignOut}>Sign out</button>
           <button className="menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav}><Icon name="menu" /> Menu</button>
         </div>
@@ -787,7 +766,7 @@ export default function App() {
           <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); if (id === 'maintenance') refreshConfig(); }} key={id}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
         </aside>
         <main id="content" key={page}>
-          {sourceBanner}
+          {linkError && <p className="field-error" role="status">Controller poll failed: {linkError}</p>}
           {override.active && (
             <div className={`override-banner ${override.cancelling ? 'cancelling' : ''}`}>
               <div>

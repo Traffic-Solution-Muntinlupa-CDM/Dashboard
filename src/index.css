@@ -775,8 +775,6 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
 }
 .override-banner b { color: #8b4d0d; }
 .override-banner.cancelling { background: #eef3f8; border-left-color: #8da6b9; }
-.override-banner.preview { background: #eef6fc; border-left-color: #0b66b2; color: #27445c; }
-.override-banner.preview b { color: #0b66b2; }
 
 @media (max-width: 1100px) {
   .control-grid { grid-template-columns: 1fr; }
@@ -1016,21 +1014,6 @@ aside nav button > span {
 }
 
 /* --- live controller wiring ------------------------------------------------ */
-.source-banner {
-  margin: 0 0 20px;
-  border-left: 4px solid var(--line-dark);
-  padding: 11px 14px;
-  background: #ffffff;
-  color: #4b5d55;
-  font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.source-banner.ok { border-left-color: var(--green); }
-.source-banner.warning { border-left-color: var(--amber); background: #fdf6ea; }
-.source-banner b { color: var(--ink); }
-.source-banner span { color: #718699; }
-
 .maintenance-grid input:disabled,
 .maintenance-grid select:disabled { background: #eef3f8; color: #7b8881; cursor: not-allowed; }
 

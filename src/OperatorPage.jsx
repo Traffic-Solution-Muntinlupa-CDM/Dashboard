@@ -230,28 +230,15 @@ export default function OperatorPage({ phase, signals, override, onStatusChange,
 
   const badge = running
     ? { tone: 'warning', label: cancelling ? 'Returning to policy' : 'Operator in control' }
-    : previewMode
-      ? { tone: 'simulated', label: 'Preview mode' }
-      : activeSignals.available
-        ? { tone: 'ok', label: 'Policy in control' }
-        : { tone: 'offline', label: 'Control unavailable' };
+    : null;
 
   return (
     <>
       <PageTitle
         title="Control room"
         description="Queue phases for the signal heads, run them once or rotate them, then hand control back to the policy."
-        badge={<Badge tone={badge.tone}>{badge.label}</Badge>}
+        badge={badge ? <Badge tone={badge.tone}>{badge.label}</Badge> : null}
       />
-
-      {previewMode && (
-        <div className="override-banner preview">
-          <div>
-            <b>Preview mode</b>
-            <span> — no controller connected. The program runs in this browser and nothing is sent to the Pi.</span>
-          </div>
-        </div>
-      )}
 
       <div className="control-grid">
         <Card className="control-card">
