@@ -1014,10 +1014,66 @@ aside nav button > span {
 .maintenance-grid select, .maintenance-grid input { font-size: 15px; }
 .primary { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 14px; text-transform: none; }
 .chart .recharts-responsive-container, .two-col .recharts-responsive-container { font-family: 'Atkinson Hyperlegible', sans-serif; font-size: 12px; }
-@media (max-width: 820px) {
-  .page-title h1, .overview-title h1 { font-size: 38px; }
-  .page-title .title-copy > p:last-child, .overview-title p { font-size: 16px; }
+/* --- collapsible navigation ----------------------------------------------- */
+.nav-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
+.nav-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid #d3dee8;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #496176;
+}
+.nav-collapse:hover { border-color: #0b66b2; color: #075a9c; }
+.nav-collapse .icon { width: 14px; height: 14px; }
+.shell { transition: grid-template-columns .18s ease; }
+.shell.collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+.shell.collapsed aside { padding: 30px 10px 20px; }
+.shell.collapsed .nav-heading { justify-content: center; margin: 0 0 16px; }
+.shell.collapsed .nav-heading > span { display: none; }
+.shell.collapsed nav button {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  padding: 0;
+  min-height: 46px;
+}
+.shell.collapsed nav button > span,
+.shell.collapsed nav button > i { display: none; }
+.shell.collapsed nav button > .icon { width: 20px; height: 20px; }
+.shell.collapsed nav button.selected::before { top: 8px; bottom: 8px; }
+
+@media (max-width: 820px) {
+  .nav-collapse { display: none; }
+  .shell.collapsed { grid-template-columns: 1fr; }
+}
+
+/* --- readability pass ------------------------------------------------------ */
+.badge { font-size: 12px; }
+.page-title .title-copy > p:last-child { font-size: 15px; line-height: 1.55; }
+aside nav button > span { font-size: 14px; }
+.log-index, .log-row time { font-size: 12px; }
+.sequence li > span:first-child { font-size: 12px; }
+.approach-list-head { font-size: 13px; }
+.control-card label { font-size: 12px; }
+.step-index, .phase-chip small, .step-unit { font-size: 12px; }
+.override-status span, .weather-eyebrow, .camera-empty span { font-size: 12px; }
+.segmented button { font-size: 13px; }
+.login-card label, .modal label { font-size: 12px; }
+.field-note, .field-error, .inline-notice { font-size: 13px; }
+.brief-status p { font-size: 14px; }
+.summary-metrics span { font-size: 14px; }
+.summary-metrics p { font-size: 13px; }
+.camera-overlay.bottom { font-size: 13px; }
 
 /* --- live controller wiring ------------------------------------------------ */
 .maintenance-grid input:disabled,
@@ -1137,5 +1193,7 @@ aside nav button > span {
 @media (max-width: 820px) {
   .camera-panel { height: 260px; }
   .camera-frame, .camera-empty { border-radius: 4px 4px 0 0; }
+  .page-title h1, .overview-title h1 { font-size: 38px; }
+  .page-title .title-copy > p:last-child, .overview-title p { font-size: 16px; }
 }
 

@@ -113,6 +113,25 @@ export default function App() {
   const [weather, setWeather] = useState(null);
   const [linkError, setLinkError] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('andar.nav') === 'collapsed';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleNav = () => {
+    setNavCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem('andar.nav', next ? 'collapsed' : 'expanded');
+      } catch {
+        // private mode: the toggle still works for this session
+      }
+      return next;
+    });
+  };
 
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState(null);
@@ -775,10 +794,21 @@ export default function App() {
           <button className="menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav}><Icon name="menu" /> Menu</button>
         </div>
       </header>
-      <div className="shell">
+      <div className={`shell ${navCollapsed ? 'collapsed' : ''}`}>
         <aside className={mobileNav ? 'open' : ''}>
-          <div className="nav-heading"><span>Workspace</span></div>
-          <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); if (id === 'maintenance') refreshConfig(); }} key={id}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
+          <div className="nav-heading">
+            <span>Workspace</span>
+            <button
+              type="button"
+              className="nav-collapse"
+              onClick={toggleNav}
+              aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+              aria-expanded={!navCollapsed}
+            >
+              <Icon name={navCollapsed ? 'chevron-right' : 'chevron-left'} />
+            </button>
+          </div>
+          <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); if (id === 'maintenance') refreshConfig(); }} key={id} title={label}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
         </aside>
         <main id="content" key={page}>
           {linkError && <p className="field-error" role="status">Controller poll failed: {linkError}</p>}

@@ -7,6 +7,8 @@ export default function Icon({ name }) {
     tools: <><path d="m14 6 4-4 4 4-4 4M18 2v8M4 21l7-7" /><path d="M13 13 8 8 3 9l-1-1 6-6 1 1-1 5 5 5" /></>,
     log: <><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5" /></>,
     menu: <><path d="M3 6h18M3 12h18M3 18h18" /></>,
+    'chevron-left': <><path d="m14 5-7 7 7 7" /></>,
+    'chevron-right': <><path d="m10 5 7 7-7 7" /></>,
     arrow: <><path d="M5 12h14m-5-5 5 5-5 5" /></>,
   };
   return <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
