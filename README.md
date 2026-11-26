@@ -52,6 +52,35 @@ hosted on the Pi itself).
 `/current` only changes on a phase change (every 36–80 s); the dashboard polls
 it every 3 s and takes counts from `/live` so the numbers move between decisions.
 
+## Remote Pi over SSH
+
+If the Pi is not on the laptop's network, forward its REST port instead of
+routing to its IP. On the laptop:
+
+```powershell
+ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 `
+    -L 8080:127.0.0.1:8080 jrg@<pi-host>
+```
+
+Leave `VITE_PI_URL` at its default (`http://127.0.0.1:8080`) — the SSH client
+connects to the Pi's own loopback, so the controller does not need a LAN IP, a
+firewall rule or a static reservation. Every endpoint works through it,
+including `PUT /config`, the camera stills and the operator override.
+
+- Local port busy? `-L 18080:127.0.0.1:8080`, then `VITE_PI_URL=http://127.0.0.1:18080`.
+- Non-standard SSH port? Add `-p 2222` (the `-L` spec stays the same).
+- Behind a jump host? `ssh -J you@bastion -N -L 8080:127.0.0.1:8080 jrg@<pi-host>`.
+- If the tunnel drops, the dashboard falls back to **Example data** and the
+  override banner disappears; restart the tunnel and the next poll recovers.
+  The Control room drops into preview mode while the link is down.
+
+The keepalive matters on Wi-Fi: without `ServerAliveInterval` a dead tunnel looks
+like a healthy socket until a request times out.
+
+For a longer-lived setup, a mesh VPN (Tailscale/WireGuard) gives both machines
+stable addresses and removes the "remember to start the tunnel" step; the
+dashboard only cares about the URL either way.
+
 ## Camera stills
 
 Overview shows a still for the active movement instead of the schematic. It
