@@ -808,7 +808,7 @@ export default function App() {
               <Icon name={navCollapsed ? 'chevron-right' : 'chevron-left'} />
             </button>
           </div>
-          <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); if (id === 'maintenance') refreshConfig(); }} key={id} title={label}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
+          <nav aria-label="Primary navigation">{nav.map(([id, label, icon]) => <button className={page === id ? 'selected' : ''} onClick={() => { setPage(id); setMobileNav(false); if (id === 'maintenance') refreshConfig(); }} key={id} data-label={label} aria-label={label}><Icon name={icon} /><span>{label}</span><i /></button>)}</nav>
         </aside>
         <main id="content" key={page}>
           {linkError && <p className="field-error" role="status">Controller poll failed: {linkError}</p>}
