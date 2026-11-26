@@ -742,7 +742,6 @@ export default function App() {
     />
     <Card className="log-card">
       <SectionHeading code="EVENT REGISTER / 05" title="Recent activity" description="Rows below are derived from the current session and its live link." />
-      <div className="legend"><Badge tone="ok">Operational</Badge><Badge tone="warning">Advisory</Badge><Badge>System</Badge><Badge tone="offline">Unconfirmed</Badge></div>
       {activityRows}
     </Card>
   </>;
