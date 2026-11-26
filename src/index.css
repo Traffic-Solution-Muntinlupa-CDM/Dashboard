@@ -573,7 +573,6 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   border-radius: 6px;
 }
 .login-card h1 { margin: 0; color: #102a43; font: 750 26px/1.1 'Archivo', sans-serif; }
-.login-card > p { margin: 0; color: #60768a; font-size: 14px; }
 .login-card label {
   display: grid;
   gap: 6px;
@@ -590,14 +589,6 @@ main { max-width: 1480px; padding: 44px 48px 64px; }
   font: 500 15px 'Atkinson Hyperlegible', sans-serif;
 }
 .login-card .primary { justify-self: start; }
-.login-note {
-  position: fixed;
-  bottom: 16px;
-  margin: 0;
-  color: #718699;
-  font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-size: 12px;
-}
 
 .header-signout {
   border: 0;

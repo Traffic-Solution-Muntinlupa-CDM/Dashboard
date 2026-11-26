@@ -27,7 +27,6 @@ export default function LoginPage({ onSignedIn }) {
       </header>
       <form className="login-card" onSubmit={submit}>
         <h1>Operator sign in</h1>
-        <p>Traffic operations workspace.</p>
         <label>
           Password
           <input
@@ -41,7 +40,6 @@ export default function LoginPage({ onSignedIn }) {
         {error && <p className="field-error" role="alert">{error}</p>}
         <button className="primary" type="submit">Sign in</button>
       </form>
-      <p className="login-note">Demo access gate. The controller itself is unauthenticated.</p>
     </div>
   );
 }
