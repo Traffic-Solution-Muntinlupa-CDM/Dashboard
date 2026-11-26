@@ -198,9 +198,9 @@ export async function loadRuntimeConfig(signal) {
     };
   }
   if (!response.ok) {
-    throw new ConfigError(response.payload?.error || `Controller answered ${response.status}`, {
-      status: response.status,
-    });
+    const message = response.payload?.error
+      || (response.status >= 500 ? 'Controller unreachable.' : `Controller answered ${response.status}`);
+    throw new ConfigError(message, { status: response.status });
   }
   return { mounted: true, config: response.payload, message: null };
 }
@@ -220,7 +220,8 @@ export async function saveRuntimeConfig(config, signal) {
   });
 
   if (!response.ok) {
-    const message = response.payload?.error || `Controller answered ${response.status}`;
+    const message = response.payload?.error
+      || (response.status >= 500 ? 'Controller unreachable.' : `Controller answered ${response.status}`);
     throw new ConfigError(message, { status: response.status, field: fieldFromMessage(message) });
   }
   return response.payload;

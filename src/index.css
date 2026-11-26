@@ -1091,11 +1091,17 @@ aside nav button > span { font-size: 14px; }
 .override-status span, .weather-eyebrow, .camera-empty span { font-size: 12px; }
 .segmented button { font-size: 13px; }
 .login-card label, .modal label { font-size: 12px; }
-.field-note, .field-error, .inline-notice { font-size: 13px; }
-.brief-status p { font-size: 14px; }
+.field-note, .field-error, .inline-notice { font-size: 14px; }
+.brief-status p { font-size: 14px; color: #4c6377; }
 .summary-metrics span { font-size: 14px; }
-.summary-metrics p { font-size: 13px; }
+.summary-metrics p { font-size: 14px; font-weight: 500; color: #3f586c; }
 .camera-overlay.bottom { font-size: 13px; }
+.section-heading p { color: #43596d; }
+.priority-item p { color: #40586c; }
+.step-unit { color: #526a7e; }
+.log-row time, .log-index { color: #5a7185; }
+.camera-empty span { color: #4c6377; }
+.weather-eyebrow { color: #4c6377; }
 
 /* --- live controller wiring ------------------------------------------------ */
 .maintenance-grid input:disabled,
@@ -1103,10 +1109,11 @@ aside nav button > span { font-size: 14px; }
 
 .field-note {
   margin: 6px 0 0;
-  color: #718699;
+  color: #3f586c;
   font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
 }
 .field-error {
   margin: 10px 0 0;
@@ -1114,8 +1121,9 @@ aside nav button > span { font-size: 14px; }
   padding-left: 10px;
   color: #8d3540;
   font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .read-only-value {
@@ -1127,9 +1135,9 @@ aside nav button > span { font-size: 14px; }
   border: 1px dashed var(--line-dark);
   padding: 10px 11px;
   background: #f7faff;
-  color: #4b5d55;
+  color: #334f66;
   font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
 }
 .read-only-value span { color: #334f66; font-weight: 700; }
 

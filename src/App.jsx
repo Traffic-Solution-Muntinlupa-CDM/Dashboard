@@ -577,22 +577,10 @@ export default function App() {
   </>;
 
   const configError = configState.status === 'error' || saveState.status === 'error';
-  const configBadge = !controllerOnline
-    ? { tone: 'offline', label: 'Controller offline' }
-    : configState.status === 'ready'
-      ? { tone: 'ok', label: 'Runtime config loaded' }
-      : configState.status === 'unmounted'
-        ? { tone: 'warning', label: 'Not mounted' }
-        : configState.status === 'loading'
-          ? { tone: 'neutral', label: 'Reading config' }
-          : configState.status === 'error'
-            ? { tone: 'offline', label: 'Unavailable' }
-            : { tone: 'neutral', label: 'Not loaded' };
   const maintenance = <>
     <PageTitle
       title="Controller configuration"
       description="Reads and writes the controller's live deploy_config.json. Changes hot-apply on the next decision."
-      badge={<Badge tone={configBadge.tone}>{configBadge.label}</Badge>}
     />
     <div className="maintenance-grid">
       <Card>
@@ -617,8 +605,8 @@ export default function App() {
           <input type="checkbox" checked={form?.serveEmpty ?? false} onChange={(event) => setField('serveEmpty', event.target.checked)} disabled={!form} />
           Serve empty approaches <small>dispatch.serve_empty</small>
         </label>
-        <div className="read-only-value"><span>Emergency override</span><b>Not available</b></div>
-        <p className="field-note">The deployed controller exposes no emergency command path. Overrides come from the guard, pedestrian quota, and deadline layers only.</p>
+        <div className="read-only-value"><span>Emergency override</span><b>Control room</b></div>
+        <p className="field-note">Phase takeovers are queued in Control room. They run through the heads' yellow and clearance, then hand control back to the policy.</p>
         <div className="read-only-value"><span>Config file</span><b>{connection.runtimeConfig ? 'deploy_config.json' : 'Not mounted'}</b></div>
       </Card>
 
