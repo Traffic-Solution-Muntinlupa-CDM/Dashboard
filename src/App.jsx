@@ -589,7 +589,7 @@ export default function App() {
         {configState.status === 'unmounted' && <p className="field-note">{configState.message}</p>}
         {configState.status === 'error' && <p className="field-error">{configState.message}</p>}
         <label>
-          Preset — fills the form only
+          Presets
           <select value={presetId} onChange={applyPreset} disabled={!form}>
             <option value="">Choose a preset…</option>
             {PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
